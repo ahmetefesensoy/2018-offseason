@@ -127,6 +127,18 @@ public final class SwerveDriveSubsystem extends SubsystemBase implements AutoClo
             .toArray(SwerveModuleState[]::new);
     }
 
+    public ChassisSpeeds getMeasuredChassisSpeeds() {
+        return kinematics.toChassisSpeeds(getMeasuredModuleStates());
+    }
+
+    public boolean isDrivetrainHealthy() {
+        return Arrays.stream(getMeasuredModuleStates()).allMatch(state ->
+            state != null
+                && state.angle != null
+                && Double.isFinite(state.speedMetersPerSecond)
+                && Double.isFinite(state.angle.getRadians()));
+    }
+
     public Pose2d getPose() {
         return poseEstimator.getEstimatedPosition();
     }

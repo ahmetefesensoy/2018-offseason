@@ -1,14 +1,27 @@
 package frc.robot;
 
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
+import frc.robot.autonomy.AutonomyCommandFrame;
+import frc.robot.autonomy.AutonomyCommandSource;
+import frc.robot.autonomy.AutonomyController;
+import frc.robot.autonomy.AutonomyDriveCommand;
+import frc.robot.autonomy.AutonomyLinkIONetworkTables;
+import frc.robot.autonomy.AutonomyRobotState;
+import frc.robot.autonomy.AutonomySafetyGate;
 import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.ElevatorSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
 import frc.robot.subsystems.SwerveDriveSubsystem;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 /** Owns every subsystem and wires joystick buttons to their commands. */
 public class RobotContainer {
@@ -20,15 +33,59 @@ public class RobotContainer {
     private final IntakeSubsystem intake = new IntakeSubsystem();
     private final ClimbSubsystem climb = new ClimbSubsystem();
     private final SwerveDriveSubsystem drivetrain;
+    private final AutonomyCommandSource autonomyCommandSource;
+    private final Command autonomousCommand;
 
     public RobotContainer() {
-        this(SwerveDriveSubsystem.createReal());
+        drivetrain = SwerveDriveSubsystem.createReal();
+        autonomyCommandSource = createRealAutonomyController(drivetrain);
+        autonomousCommand = new AutonomyDriveCommand(drivetrain, autonomyCommandSource);
+        configureDriveCommand();
+        configureButtonBindings();
     }
 
     RobotContainer(SwerveDriveSubsystem drivetrain) {
+        this(drivetrain, new InactiveAutonomyCommandSource());
+    }
+
+    RobotContainer(
+            SwerveDriveSubsystem drivetrain,
+            AutonomyCommandSource autonomyCommandSource) {
         this.drivetrain = Objects.requireNonNull(drivetrain);
+        this.autonomyCommandSource = Objects.requireNonNull(autonomyCommandSource);
+        autonomousCommand = new AutonomyDriveCommand(drivetrain, autonomyCommandSource);
         configureDriveCommand();
         configureButtonBindings();
+    }
+
+    private static AutonomyController createRealAutonomyController(
+            SwerveDriveSubsystem drivetrain) {
+        return new AutonomyController(
+            new AutonomyLinkIONetworkTables(NetworkTableInstance.getDefault()),
+            new AutonomySafetyGate(),
+            UUID.randomUUID().toString(),
+            RobotController::getFPGATime,
+            DriverStation::isEnabled,
+            () -> DriverStation.isAutonomous() || DriverStation.isTest(),
+            RobotContainer::currentModeName,
+            () -> new AutonomyRobotState(
+                drivetrain.getPose(),
+                drivetrain.getMeasuredChassisSpeeds(),
+                drivetrain.isGyroConnected() && !drivetrain.isGyroCalibrating(),
+                drivetrain.isDrivetrainHealthy()));
+    }
+
+    private static String currentModeName() {
+        if (!DriverStation.isEnabled()) {
+            return "DISABLED";
+        }
+        if (DriverStation.isAutonomous()) {
+            return "AUTONOMOUS";
+        }
+        if (DriverStation.isTest()) {
+            return "TEST";
+        }
+        return "TELEOP";
     }
 
     private void configureDriveCommand() {
@@ -80,7 +137,27 @@ public class RobotContainer {
         return drivetrain;
     }
 
+    public Command getAutonomousCommand() {
+        return autonomousCommand;
+    }
+
+    public void stopAutonomy() {
+        autonomyCommandSource.cancel();
+        drivetrain.stop();
+    }
+
     public void stopIntake() {
         intake.stop();
+    }
+
+    private static final class InactiveAutonomyCommandSource
+            implements AutonomyCommandSource {
+        @Override
+        public Optional<AutonomyCommandFrame> currentCommand() {
+            return Optional.empty();
+        }
+
+        @Override
+        public void cancel() {}
     }
 }

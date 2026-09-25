@@ -6,6 +6,9 @@ public final class AutonomyConstants {
 
     public static final double MAX_TRANSLATION_SPEED_MPS = 0.75;
     public static final double MAX_ROTATION_SPEED_RAD_PER_SEC = 1.5;
+    public static final double MAX_TRANSLATION_ACCEL_MPS2 = 2.0;
+    public static final double MAX_ROTATION_ACCEL_RAD_PER_SEC2 = 4.0;
+    public static final double CONTROL_PERIOD_SECONDS = 0.02;
 
     public static final long MAX_COMMAND_AGE_US = 100_000L;
     public static final long MAX_FUTURE_SKEW_US = 20_000L;

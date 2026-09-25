@@ -19,12 +19,36 @@ public class Robot extends TimedRobot {
     }
 
     @Override
-    public void autonomousInit() {}
+    public void autonomousInit() {
+        autonomousCommand = robotContainer.getAutonomousCommand();
+        if (autonomousCommand != null) {
+            autonomousCommand.schedule();
+        }
+    }
+
+    @Override
+    public void disabledInit() {
+        cancelAndStopAutonomy();
+    }
 
     @Override
     public void teleopInit() {
+        cancelAndStopAutonomy();
+    }
+
+    @Override
+    public void testInit() {
+        CommandScheduler.getInstance().cancelAll();
+        cancelAndStopAutonomy();
+    }
+
+    private void cancelAndStopAutonomy() {
         if (autonomousCommand != null) {
             autonomousCommand.cancel();
+            autonomousCommand = null;
+        }
+        if (robotContainer != null) {
+            robotContainer.stopAutonomy();
         }
     }
 
