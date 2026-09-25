@@ -52,4 +52,34 @@ class ElevatorSubsystemTest {
         elevator.setTargetHeight(1.52);
         assertEquals(1.52, elevator.getTargetHeightForTest(), 0.001);
     }
+
+    @Test
+    void stopStaysStoppedThroughNextPeriodicCall() {
+        // Regression test: periodic() used to unconditionally call
+        // motor.setVoltage(pid+ff) every cycle, so a stop() commanded by a
+        // released button would be overwritten by the very next 20ms tick.
+        elevator.setTargetHeight(1.52);
+        elevator.periodic(); // let the PID loop start driving toward target
+        elevator.stop();
+        elevator.periodic(); // simulate the next scheduler tick after stop()
+        assertEquals(0.0, elevator.getMotorForTest().get(), 0.001);
+    }
+
+    @Test
+    void atTargetTrueWhenEncoderMatchesGoalInMeters() {
+        // Regression coverage for a rotations/meters unit mixup: with
+        // ELEVATOR_ROTATIONS_TO_METERS != 1.0 this only passes if
+        // getCurrentHeight() actually applies the conversion factor.
+        elevator.setTargetHeight(0.23);
+        elevator.getMotorForTest().getEncoder().setPosition(0.23 / frc.robot.Constants.ELEVATOR_ROTATIONS_TO_METERS);
+        assertTrue(elevator.atTarget());
+    }
+
+    @Test
+    void atTargetFalseWhenEncoderJustOutsideTolerance() {
+        elevator.setTargetHeight(0.23);
+        double justOutside = (0.23 + 0.03) / frc.robot.Constants.ELEVATOR_ROTATIONS_TO_METERS;
+        elevator.getMotorForTest().getEncoder().setPosition(justOutside);
+        assertFalse(elevator.atTarget());
+    }
 }

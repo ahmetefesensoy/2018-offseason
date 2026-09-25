@@ -5,6 +5,7 @@ import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
@@ -26,12 +27,16 @@ public class ElevatorSubsystem extends SubsystemBase {
     private final ElevatorFeedforward feedforward;
 
     private double targetHeightMeters = Constants.ELEVATOR_GROUND_METERS;
+    private boolean stopped = false;
 
     public ElevatorSubsystem() {
         motor = new SparkMax(Constants.ARM_MOTOR_PORT, MotorType.kBrushless);
         encoder = motor.getEncoder();
 
         SparkMaxConfig config = new SparkMaxConfig();
+        // Brake mode: an elevator holding a cube must not free-fall the
+        // instant the robot is disabled or a match ends.
+        config.idleMode(IdleMode.kBrake);
         motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         pid = new ProfiledPIDController(
@@ -42,6 +47,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         feedforward = new ElevatorFeedforward(0.0, 0.3, 0.0);
 
         encoder.setPosition(0.0);
+        pid.reset(getCurrentHeight());
     }
 
     /** Commands the elevator to a new height, clamped to [GROUND, SCALE]. */
@@ -51,6 +57,7 @@ public class ElevatorSubsystem extends SubsystemBase {
             Constants.ELEVATOR_GROUND_METERS,
             Constants.ELEVATOR_SCALE_METERS);
         pid.setGoal(targetHeightMeters);
+        stopped = false;
     }
 
     /** @return the elevator's current height in meters, derived from motor rotations. */
@@ -63,13 +70,24 @@ public class ElevatorSubsystem extends SubsystemBase {
         return Math.abs(getCurrentHeight() - targetHeightMeters) <= TOLERANCE_METERS;
     }
 
+    /**
+     * Commands zero output and latches that state so periodic() doesn't
+     * immediately overwrite it with the PID's next output on the following
+     * scheduler tick.
+     */
     public void stop() {
+        stopped = true;
         motor.set(0.0);
     }
 
     /** Test-only accessor for the pending (clamped) target height. */
     double getTargetHeightForTest() {
         return targetHeightMeters;
+    }
+
+    /** Test-only accessor for reading the motor's last commanded output. */
+    SparkMax getMotorForTest() {
+        return motor;
     }
 
     /** Releases hardware handles; used by tests to clean up between cases. */
@@ -80,9 +98,12 @@ public class ElevatorSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         double currentHeight = getCurrentHeight();
-        double pidOutput = pid.calculate(currentHeight);
-        double ffOutput = feedforward.calculate(pid.getSetpoint().velocity);
-        motor.setVoltage(pidOutput + ffOutput);
+
+        if (!stopped) {
+            double pidOutput = pid.calculate(currentHeight);
+            double ffOutput = feedforward.calculate(pid.getSetpoint().velocity);
+            motor.setVoltage(pidOutput + ffOutput);
+        }
 
         SmartDashboard.putNumber("Elevator Height (m)", currentHeight);
         SmartDashboard.putNumber("Elevator Target (m)", targetHeightMeters);
