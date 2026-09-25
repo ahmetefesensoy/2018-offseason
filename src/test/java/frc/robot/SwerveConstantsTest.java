@@ -55,4 +55,10 @@ class SwerveConstantsTest {
         assertEquals(-0.30, SwerveConstants.BACK_RIGHT_LOCATION.getX(), 1e-12);
         assertEquals(-0.30, SwerveConstants.BACK_RIGHT_LOCATION.getY(), 1e-12);
     }
+
+    @Test
+    void absoluteEncoderDirectionIsConfiguredSeparatelyFromTurnMotorDirection() {
+        assertTrue(SwerveConstants.MODULE_CONFIGS.stream()
+            .noneMatch(SwerveConstants.ModuleConfig::absoluteEncoderInverted));
+    }
 }

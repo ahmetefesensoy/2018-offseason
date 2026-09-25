@@ -13,6 +13,7 @@ public final class SwerveConstants {
         int turnCanId,
         boolean driveInverted,
         boolean turnInverted,
+        boolean absoluteEncoderInverted,
         double absoluteOffsetRadians) {}
 
     public static final double WHEEL_DIAMETER_METERS = 0.1016;
@@ -62,8 +63,8 @@ public final class SwerveConstants {
         -TRACK_WIDTH_METERS / 2.0);
 
     public static final List<ModuleConfig> MODULE_CONFIGS = List.of(
-        new ModuleConfig("FL", 10, 11, false, false, 0.0),
-        new ModuleConfig("FR", 12, 13, false, false, 0.0),
-        new ModuleConfig("BL", 14, 15, false, false, 0.0),
-        new ModuleConfig("BR", 16, 17, false, false, 0.0));
+        new ModuleConfig("FL", 10, 11, false, false, false, 0.0),
+        new ModuleConfig("FR", 12, 13, false, false, false, 0.0),
+        new ModuleConfig("BL", 14, 15, false, false, false, 0.0),
+        new ModuleConfig("BR", 16, 17, false, false, false, 0.0));
 }
