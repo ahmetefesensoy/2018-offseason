@@ -9,6 +9,10 @@ out/
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
 
+# Local Codex visual sessions and isolated implementation worktrees
+.superpowers/
+.worktrees/
+
 # OS
 .DS_Store
 Thumbs.db
