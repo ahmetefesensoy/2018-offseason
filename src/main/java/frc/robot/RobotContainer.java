@@ -3,7 +3,7 @@ package frc.robot;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.ElevatorSubsystem;
@@ -27,20 +27,27 @@ public class RobotContainer {
     }
 
     private void configureButtonBindings() {
-        new JoystickButton(joystick, 1).onTrue(new RunCommand(intake::autoIntake, intake));
-        new JoystickButton(joystick, 2).onTrue(new RunCommand(intake::open, intake));
-        new JoystickButton(joystick, 3).onTrue(new RunCommand(intake::close, intake));
-        new JoystickButton(joystick, 4).onTrue(new RunCommand(intake::stop, intake));
+        // whileTrue + startEnd: the mechanism runs only while the button is
+        // held and stops the instant it's released. onTrue(RunCommand) would
+        // run forever once triggered - nothing would ever call stop().
+        new JoystickButton(joystick, 1).whileTrue(
+            Commands.startEnd(intake::autoIntake, intake::stop, intake));
+        new JoystickButton(joystick, 2).whileTrue(
+            Commands.startEnd(intake::open, intake::stop, intake));
+        new JoystickButton(joystick, 3).whileTrue(
+            Commands.startEnd(intake::close, intake::stop, intake));
 
         new JoystickButton(joystick, 5).onTrue(
-            new RunCommand(() -> elevator.setTargetHeight(Constants.ELEVATOR_SWITCH_METERS), elevator));
+            Commands.runOnce(() -> elevator.setTargetHeight(Constants.ELEVATOR_SWITCH_METERS), elevator));
         new JoystickButton(joystick, 6).onTrue(
-            new RunCommand(() -> elevator.setTargetHeight(Constants.ELEVATOR_SCALE_METERS), elevator));
+            Commands.runOnce(() -> elevator.setTargetHeight(Constants.ELEVATOR_SCALE_METERS), elevator));
         new JoystickButton(joystick, 7).onTrue(
-            new RunCommand(() -> elevator.setTargetHeight(Constants.ELEVATOR_GROUND_METERS), elevator));
+            Commands.runOnce(() -> elevator.setTargetHeight(Constants.ELEVATOR_GROUND_METERS), elevator));
 
-        new JoystickButton(joystick, 8).onTrue(new RunCommand(climb::extend, climb));
-        new JoystickButton(joystick, 9).onTrue(new RunCommand(climb::retract, climb));
+        new JoystickButton(joystick, 8).whileTrue(
+            Commands.startEnd(climb::extend, climb::stop, climb));
+        new JoystickButton(joystick, 9).whileTrue(
+            Commands.startEnd(climb::retract, climb::stop, climb));
     }
 
     /** Drives the (still tank-drive) chassis directly from joystick axes. */
