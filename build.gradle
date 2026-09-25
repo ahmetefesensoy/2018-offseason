@@ -17,6 +17,8 @@ deploy {
     }
 }
 
+def deployArtifact = deploy.targets.roborio.artifacts.frcJava
+
 java {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
@@ -28,8 +30,14 @@ repositories {
 
 dependencies {
     implementation wpi.java.deps.wpilib()
-    implementation "edu.wpi.first.wpilibNewCommands:wpilibNewCommands-java:2025.3.2"
+    implementation "edu.wpi.first.wpilibNewCommands:wpilibNewCommands-java:2025.1.1"
     implementation wpi.java.vendor.java()
+
+    roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
+    roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
+
+    roborioRelease wpi.java.deps.wpilibJniRelease(wpi.platforms.roborio)
+    roborioRelease wpi.java.vendor.jniRelease(wpi.platforms.roborio)
 
     nativeDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.desktop)
     nativeDebug wpi.java.vendor.jniDebug(wpi.platforms.desktop)
@@ -46,7 +54,21 @@ dependencies {
 test {
     useJUnitPlatform()
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
+    // Each subsystem test class constructs real SparkMax objects on fixed
+    // CAN IDs and never releases them cleanly across the whole suite; a
+    // fresh JVM per test class avoids one class's leftover CAN handles
+    // colliding with the next class's device IDs.
+    forkEvery = 1
 }
 
+// Fat jar: bundles all runtime dependencies and sets Main-Class so the
+// roboRIO's JVM knows which class to launch.
+jar {
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+deployArtifact.jarTask = jar
 wpi.java.configureExecutableTasks(jar)
 wpi.java.configureTestTasks(test)
