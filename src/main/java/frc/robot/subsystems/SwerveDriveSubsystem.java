@@ -70,6 +70,13 @@ public final class SwerveDriveSubsystem extends SubsystemBase implements AutoClo
             double ySpeedMetersPerSecond,
             double angularSpeedRadiansPerSecond,
             boolean fieldRelative) {
+        if (!Double.isFinite(xSpeedMetersPerSecond)
+                || !Double.isFinite(ySpeedMetersPerSecond)
+                || !Double.isFinite(angularSpeedRadiansPerSecond)) {
+            stop();
+            return;
+        }
+
         ChassisSpeeds speeds;
         if (fieldRelative && gyro.isConnected() && !gyro.isCalibrating()) {
             speeds = ChassisSpeeds.fromFieldRelativeSpeeds(

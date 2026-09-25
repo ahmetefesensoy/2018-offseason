@@ -86,6 +86,19 @@ class SwerveModuleTest {
         assertEquals(0.0, io.turnVolts, 1e-9);
     }
 
+    @Test
+    void nonFiniteDesiredStateStopsBothOutputs() {
+        io.inputs = inputs(0.0, 0.0, 0.0, 0.0);
+        module.updateInputs();
+
+        module.setDesiredState(
+            new SwerveModuleState(Double.NaN, Rotation2d.kZero));
+
+        assertTrue(io.stopCalled);
+        assertEquals(0.0, io.driveVolts, 1e-9);
+        assertEquals(0.0, io.turnVolts, 1e-9);
+    }
+
     private static SwerveModuleIO.Inputs inputs(
             double drivePositionMeters,
             double driveVelocityMetersPerSecond,

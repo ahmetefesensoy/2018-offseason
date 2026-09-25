@@ -78,6 +78,14 @@ public final class SwerveModule implements AutoCloseable {
     }
 
     public void setDesiredState(SwerveModuleState desiredState) {
+        if (desiredState == null
+                || desiredState.angle == null
+                || !Double.isFinite(desiredState.speedMetersPerSecond)
+                || !Double.isFinite(desiredState.angle.getRadians())) {
+            stop();
+            return;
+        }
+
         SwerveModuleState target;
         if (Math.abs(desiredState.speedMetersPerSecond) < STOP_SPEED_THRESHOLD_MPS) {
             target = new SwerveModuleState(0.0, lastDesiredState.angle);

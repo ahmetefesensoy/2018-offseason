@@ -140,6 +140,15 @@ class SwerveDriveSubsystemTest {
         }
     }
 
+    @Test
+    void nonFiniteChassisCommandStopsEveryModule() {
+        drive.drive(Double.NaN, 0.0, 0.0, false);
+
+        for (FakeSwerveModuleIO io : moduleIOs) {
+            assertTrue(io.stopCalled);
+        }
+    }
+
     private static final class FakeGyroIO implements GyroIO {
         Rotation2d heading = Rotation2d.kZero;
         boolean connected = true;

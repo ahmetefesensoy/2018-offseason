@@ -32,7 +32,7 @@ public class RobotContainer {
     }
 
     private void configureDriveCommand() {
-        drivetrain.setDefaultCommand(Commands.run(() -> {
+        drivetrain.setDefaultCommand(Commands.runEnd(() -> {
             Translation2d translation = DriveInput.shapeTranslation(
                 -joystick.getRawAxis(1),
                 -joystick.getRawAxis(0),
@@ -46,7 +46,7 @@ public class RobotContainer {
                 translation.getY() * SwerveConstants.MAX_SPEED_MPS,
                 rotation * SwerveConstants.MAX_ANGULAR_SPEED_RAD_PER_SEC,
                 true);
-        }, drivetrain));
+        }, drivetrain::stop, drivetrain));
     }
 
     private void configureButtonBindings() {
