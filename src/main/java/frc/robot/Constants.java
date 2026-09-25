@@ -19,6 +19,9 @@ public final class Constants {
     // Elevator (scissor lift) motor CAN ID (was "kolun_motoru" in legacy Constant.java)
     public static final int ARM_MOTOR_PORT = 3;
 
+    // TODO: gerçek donanım netleşince doğrulanacak — sonraki boş CAN ID.
+    public static final int CLIMB_MOTOR_PORT = 9;
+
     // Elevator preset heights, meters. Source: 2018 FRC field manual
     // (Switch plate 9in/0.23m, Scale plate 5ft/1.52m at match start).
     public static final double ELEVATOR_GROUND_METERS = 0.0;
