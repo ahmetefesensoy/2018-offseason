@@ -10,7 +10,11 @@ public final class Constants {
     public static final int DRIVE_RIGHT_1_PORT = 5;
     public static final int DRIVE_RIGHT_2_PORT = 7;
 
-    public static final int JOYSTICK_PORT = 8;
+    // DriverStation joystick slots are 0-5; the legacy Constant.java's value
+    // of 8 was never valid (that file never compiled, so it was never caught).
+    // DriverStation joystick slots are 0-5; the legacy Constant.java's value
+    // of 8 was never valid (that file never compiled, so it was never caught).
+    public static final int JOYSTICK_PORT = 0;
 
     // Intake roller motor CAN IDs (unchanged from legacy Constant.java)
     public static final int INTAKE_RIGHT_MOTOR_PORT = 2;
