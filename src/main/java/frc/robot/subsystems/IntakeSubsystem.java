@@ -51,15 +51,20 @@ public class IntakeSubsystem extends SubsystemBase {
         rightEncoder.setPosition(0);
     }
 
-    /** Closes the rollers inward to grip a cube; stops each side once closed. */
+    /**
+     * Closes the rollers inward to grip a cube; stops each side once closed.
+     * Open position is right=-OPEN_LIMIT/left=+OPEN_LIMIT; closed is 0 for
+     * both, so closing must drive back toward 0 from whichever side open()
+     * left the encoder on.
+     */
     public void close() {
-        if (rightEncoder.getPosition() > 0) {
+        if (rightEncoder.getPosition() < 0) {
             rightMotor.set(DRIVE_SPEED);
         } else {
             rightMotor.set(0.0);
         }
 
-        if (leftEncoder.getPosition() < 0) {
+        if (leftEncoder.getPosition() > 0) {
             leftMotor.set(-DRIVE_SPEED);
         } else {
             leftMotor.set(0.0);
@@ -83,7 +88,17 @@ public class IntakeSubsystem extends SubsystemBase {
 
     /** @return true if the ultrasonic sensor reports a cube within grip range. */
     public boolean hasCube() {
-        return rangeCm < CUBE_RANGE_CM;
+        return cubeDetected(cubeSensor.isRangeValid(), rangeCm);
+    }
+
+    /**
+     * Pure decision logic for hasCube(), split out for testability.
+     * getRangeInches() returns 0 when no echo has been measured yet, which
+     * would otherwise read as "cube present" (0 < CUBE_RANGE_CM) on every
+     * disabled or just-booted robot; isRangeValid must gate that.
+     */
+    static boolean cubeDetected(boolean isRangeValid, double rangeCm) {
+        return isRangeValid && rangeCm < CUBE_RANGE_CM;
     }
 
     /** Closes automatically when a cube is sensed, opens otherwise. */
