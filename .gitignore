@@ -1,0 +1,14 @@
+# Gradle build artifacts and caches
+.gradle/
+build/
+bin/
+out/
+
+# WPILib / VS Code
+.vscode/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# OS
+.DS_Store
+Thumbs.db
