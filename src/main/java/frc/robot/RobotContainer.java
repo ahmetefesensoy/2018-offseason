@@ -1,29 +1,52 @@
 package frc.robot;
 
-import com.revrobotics.spark.SparkLowLevel.MotorType;
-import com.revrobotics.spark.SparkMax;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.subsystems.ClimbSubsystem;
 import frc.robot.subsystems.ElevatorSubsystem;
 import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.SwerveDriveSubsystem;
+import java.util.Objects;
 
 /** Owns every subsystem and wires joystick buttons to their commands. */
 public class RobotContainer {
-    private final SparkMax driveLeft1 = new SparkMax(Constants.DRIVE_LEFT_1_PORT, MotorType.kBrushless);
-    private final SparkMax driveLeft2 = new SparkMax(Constants.DRIVE_LEFT_2_PORT, MotorType.kBrushless);
-    private final SparkMax driveRight1 = new SparkMax(Constants.DRIVE_RIGHT_1_PORT, MotorType.kBrushless);
-    private final SparkMax driveRight2 = new SparkMax(Constants.DRIVE_RIGHT_2_PORT, MotorType.kBrushless);
+    private static final double DRIVE_DEADBAND = 0.08;
 
     private final Joystick joystick = new Joystick(Constants.JOYSTICK_PORT);
 
     private final ElevatorSubsystem elevator = new ElevatorSubsystem();
     private final IntakeSubsystem intake = new IntakeSubsystem();
     private final ClimbSubsystem climb = new ClimbSubsystem();
+    private final SwerveDriveSubsystem drivetrain;
 
     public RobotContainer() {
+        this(SwerveDriveSubsystem.createReal());
+    }
+
+    RobotContainer(SwerveDriveSubsystem drivetrain) {
+        this.drivetrain = Objects.requireNonNull(drivetrain);
+        configureDriveCommand();
         configureButtonBindings();
+    }
+
+    private void configureDriveCommand() {
+        drivetrain.setDefaultCommand(Commands.run(() -> {
+            Translation2d translation = DriveInput.shapeTranslation(
+                -joystick.getRawAxis(1),
+                -joystick.getRawAxis(0),
+                DRIVE_DEADBAND);
+            double rotation = DriveInput.shapeAxis(
+                -joystick.getRawAxis(4),
+                DRIVE_DEADBAND);
+
+            drivetrain.drive(
+                translation.getX() * SwerveConstants.MAX_SPEED_MPS,
+                translation.getY() * SwerveConstants.MAX_SPEED_MPS,
+                rotation * SwerveConstants.MAX_ANGULAR_SPEED_RAD_PER_SEC,
+                true);
+        }, drivetrain));
     }
 
     private void configureButtonBindings() {
@@ -36,6 +59,9 @@ public class RobotContainer {
             Commands.startEnd(intake::open, intake::stop, intake));
         new JoystickButton(joystick, 3).whileTrue(
             Commands.startEnd(intake::close, intake::stop, intake));
+
+        new JoystickButton(joystick, 4).onTrue(
+            Commands.runOnce(drivetrain::zeroHeading, drivetrain));
 
         new JoystickButton(joystick, 5).onTrue(
             Commands.runOnce(() -> elevator.setTargetHeight(Constants.ELEVATOR_SWITCH_METERS), elevator));
@@ -50,18 +76,8 @@ public class RobotContainer {
             Commands.startEnd(climb::retract, climb::stop, climb));
     }
 
-    /** Drives the (still tank-drive) chassis directly from joystick axes. */
-    public void driveWithJoystick() {
-        double speed = -joystick.getRawAxis(1) * 0.6;
-        double turn = joystick.getRawAxis(4) * 0.3;
-
-        double left = speed + turn;
-        double right = speed - turn;
-
-        driveLeft1.set(left);
-        driveLeft2.set(left);
-        driveRight1.set(-right);
-        driveRight2.set(-right);
+    public SwerveDriveSubsystem getDrivetrain() {
+        return drivetrain;
     }
 
     public void stopIntake() {

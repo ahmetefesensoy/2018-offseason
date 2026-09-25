@@ -4,14 +4,6 @@ package frc.robot;
 public final class Constants {
     private Constants() {}
 
-    // Drivetrain motor CAN IDs (unchanged from legacy Constant.java)
-    public static final int DRIVE_LEFT_1_PORT = 4;
-    public static final int DRIVE_LEFT_2_PORT = 6;
-    public static final int DRIVE_RIGHT_1_PORT = 5;
-    public static final int DRIVE_RIGHT_2_PORT = 7;
-
-    // DriverStation joystick slots are 0-5; the legacy Constant.java's value
-    // of 8 was never valid (that file never compiled, so it was never caught).
     // DriverStation joystick slots are 0-5; the legacy Constant.java's value
     // of 8 was never valid (that file never compiled, so it was never caught).
     public static final int JOYSTICK_PORT = 0;
