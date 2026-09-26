@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FRC 2018 Alliance Strategy Studio</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">FRC 2018 · POWER UP</p>
+        <h1>Alliance Strategy Studio</h1>
+      </div>
+      <div class="header-actions" aria-label="Dosya işlemleri">
+        <label class="button secondary" for="file-input">JSON / CSV aç</label>
+        <input id="file-input" type="file" accept=".json,.csv,application/json,text/csv" hidden>
+        <button id="validate-button" class="button secondary" type="button">Doğrula</button>
+        <button id="export-json" class="button primary" type="button">JSON indir</button>
+        <button id="export-png" class="button secondary" type="button">PNG indir</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel editor-panel" aria-label="Strateji düzenleyici">
+        <section>
+          <div class="section-heading">
+            <h2>Maç planı</h2>
+            <span id="save-state" class="status-chip">Yerel</span>
+          </div>
+          <label>Plan kimliği<input id="plan-id" value="demo-blue-alliance"></label>
+          <div class="two-columns">
+            <label>İttifak
+              <select id="alliance">
+                <option value="blue">Mavi</option>
+                <option value="red">Kırmızı</option>
+              </select>
+            </label>
+            <label class="toggle-label">
+              <input id="red-preview" type="checkbox">
+              Kırmızı açı önizleme
+            </label>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-heading">
+            <h2>Takım robotları</h2>
+            <button id="add-robot" class="icon-button" type="button" title="Robot ekle" aria-label="Robot ekle">＋</button>
+          </div>
+          <div id="robot-tabs" class="tabs" role="tablist" aria-label="Robot seçimi"></div>
+          <div class="two-columns">
+            <label>Takım no<input id="team-number" type="number" min="1" step="1"></label>
+            <label>Etiket<input id="robot-label"></label>
+            <label>Boy (m)<input id="footprint-length" type="number" min="0.1" step="0.01"></label>
+            <label>En (m)<input id="footprint-width" type="number" min="0.1" step="0.01"></label>
+            <label>Azami hız<input id="max-velocity" type="number" min="0.1" step="0.1"></label>
+            <label>Azami ivme<input id="max-acceleration" type="number" min="0.1" step="0.1"></label>
+          </div>
+          <label>Başlangıç güveni <output id="confidence-output"></output>
+            <input id="initial-confidence" type="range" min="0" max="1" step="0.01">
+          </label>
+        </section>
+
+        <section>
+          <div class="section-heading">
+            <h2>Görev segmenti</h2>
+            <div>
+              <button id="add-segment" class="icon-button" type="button" title="Segment ekle" aria-label="Segment ekle">＋</button>
+              <button id="delete-segment" class="icon-button danger" type="button" title="Segmenti sil" aria-label="Segmenti sil">−</button>
+            </div>
+          </div>
+          <label>Aktif segment<select id="segment-select"></select></label>
+          <div class="two-columns">
+            <label>Görev
+              <select id="task">
+                <option>PICKUP</option><option>SCORE_SWITCH</option><option>SCORE_SCALE</option>
+                <option>DELIVER_VAULT</option><option>CROSS_LINE</option><option>PARK</option>
+                <option>CLIMB</option><option>WAIT</option>
+              </select>
+            </label>
+            <label>Hedef<input id="target-id"></label>
+            <label>Başlangıç (s)<input id="start-time" type="number" min="0" step="0.1"></label>
+            <label>Süre (s)<input id="duration" type="number" min="0.1" step="0.1"></label>
+            <label>Koridor (m)<input id="corridor-radius" type="number" min="0" step="0.05"></label>
+          </div>
+        </section>
+
+        <section class="tool-row" aria-label="Çizim araçları">
+          <button id="delete-point" class="button danger" type="button">Noktayı sil</button>
+          <button id="undo" class="button secondary" type="button">Geri al</button>
+          <button id="clear-segment" class="button secondary" type="button">Segmenti temizle</button>
+        </section>
+      </aside>
+
+      <section class="field-stage" aria-label="2018 oyun alanı rota düzenleyicisi">
+        <div class="stage-toolbar">
+          <div class="legend">
+            <span><i class="dot cyan"></i> Takım 1</span>
+            <span><i class="dot violet"></i> Takım 2</span>
+            <span><i class="dot conflict"></i> Çakışma</span>
+          </div>
+          <p id="cursor-position">Alan: 16.46 × 8.23 m</p>
+        </div>
+        <div class="canvas-shell">
+          <canvas id="field-canvas" tabindex="0" aria-label="Rota eklemek için alana tıklayın; noktaları sürükleyerek taşıyın"></canvas>
+          <div id="canvas-empty" class="canvas-empty">
+            <strong>İlk rotayı çiz</strong>
+            <span>Aktif segmente yol noktası eklemek için alana tıkla.</span>
+          </div>
+        </div>
+        <div class="timeline-card">
+          <div><span>Otonom zaman penceresi</span><strong>0–15 s</strong></div>
+          <div class="timeline"><i id="timeline-progress"></i></div>
+          <p>Rota rengi zamanı, geniş yarı saydam şerit ayrılmış güvenlik koridorunu gösterir.</p>
+        </div>
+      </section>
+
+      <aside class="panel intelligence-panel" aria-label="Plan analizi">
+        <section>
+          <p class="eyebrow">Canlı analiz</p>
+          <div class="metric-grid">
+            <div><strong id="metric-robots">0</strong><span>robot</span></div>
+            <div><strong id="metric-points">0</strong><span>nokta</span></div>
+            <div><strong id="metric-conflicts">0</strong><span>çakışma</span></div>
+          </div>
+        </section>
+        <section>
+          <div class="section-heading"><h2>Tanılar</h2><span id="validity-dot" class="health-dot"></span></div>
+          <ul id="diagnostics" class="diagnostics" aria-live="polite"></ul>
+        </section>
+        <section>
+          <h2>Rezervasyon çakışmaları</h2>
+          <div id="conflicts" class="conflict-list"></div>
+        </section>
+        <section>
+          <h2>İçerik parmak izi</h2>
+          <code id="content-hash" class="hash">Plan geçerli olduğunda hesaplanır.</code>
+          <p class="hint">SHA-256, Jetson doğrulayıcısının kullandığı sıralı kanonik JSON üzerinden hesaplanır.</p>
+        </section>
+        <section class="shortcut-card">
+          <h2>Kısayollar</h2>
+          <p><kbd>Del</kbd> nokta sil · <kbd>Ctrl</kbd>+<kbd>Z</kbd> geri al</p>
+          <p><kbd>← ↑ → ↓</kbd> seçili noktayı hassas taşı</p>
+        </section>
+      </aside>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
