@@ -14,6 +14,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 
 from frc_autonomy_msgs.msg import (
     AlliancePlan as AlliancePlanMessage,
+    AutonomyStatus,
     PlanSegment as PlanSegmentMessage,
     ReservationTubeArray as ReservationTubeArrayMessage,
     RobotPlan as RobotPlanMessage,
@@ -22,6 +23,7 @@ from frc_autonomy_msgs.msg import (
     WorldState,
 )
 
+from .fusion import MatchClock, ObservedAlly, StableAllyMatcher
 from .reservations import (
     ConfidenceTracker,
     ReservationTube,
@@ -53,17 +55,10 @@ class AlliancePlaybookNode(Node):
             self._plan,
             int(self._parameter("sample_period_us")),
         )
-        self._tracker = ConfidenceTracker(
-            {
-                robot.team_number: robot.initial_confidence
-                for robot in self._plan.robots
-            },
-            corridor_tolerance_m=float(self._parameter("corridor_tolerance_m")),
-            deviation_scale_m=float(self._parameter("deviation_scale_m")),
-            missing_half_life_us=int(self._parameter("missing_half_life_us")),
-        )
-        self._match_epoch_us: int | None = None
+        self._match_clock = MatchClock()
+        self._reset_fusion()
         self._revision = 0
+
         latched_qos = QoSProfile(
             depth=1,
             reliability=ReliabilityPolicy.RELIABLE,
@@ -85,6 +80,12 @@ class AlliancePlaybookNode(Node):
             10,
         )
         self.create_subscription(
+            AutonomyStatus,
+            "/autonomy/status",
+            self._status_callback,
+            10,
+        )
+        self.create_subscription(
             WorldState,
             "/world/state",
             self._world_callback,
@@ -99,6 +100,22 @@ class AlliancePlaybookNode(Node):
             f"sha256={self._plan.content_sha256}"
         )
 
+    def _reset_fusion(self) -> None:
+        self._tracker = ConfidenceTracker(
+            {
+                robot.team_number: robot.initial_confidence
+                for robot in self._plan.robots
+            },
+            corridor_tolerance_m=float(self._parameter("corridor_tolerance_m")),
+            deviation_scale_m=float(self._parameter("deviation_scale_m")),
+            missing_half_life_us=int(self._parameter("missing_half_life_us")),
+        )
+        self._matcher = StableAllyMatcher(
+            missing_binding_grace_us=int(
+                self._parameter("missing_binding_grace_us")
+            )
+        )
+
     def _declare_parameters(self) -> None:
         self.declare_parameter("plan_path", "")
         self.declare_parameter("expected_sha256", "")
@@ -107,6 +124,7 @@ class AlliancePlaybookNode(Node):
         self.declare_parameter("corridor_tolerance_m", 0.20)
         self.declare_parameter("deviation_scale_m", 0.75)
         self.declare_parameter("missing_half_life_us", 1_000_000)
+        self.declare_parameter("missing_binding_grace_us", 1_000_000)
 
     def _parameter(self, name: str):
         return self.get_parameter(name).value
@@ -122,53 +140,43 @@ class AlliancePlaybookNode(Node):
             raise ValueError("expected_sha256 does not match the validated plan")
         return plan
 
+    def _status_callback(self, status: AutonomyStatus) -> None:
+        now_us = self.get_clock().now().nanoseconds // 1_000
+        was_active = self._match_clock.active
+        started = self._match_clock.update(status.mode, now_us)
+        if started or (was_active and not self._match_clock.active):
+            self._reset_fusion()
+            self._revision += 1
+
     def _world_callback(self, world: WorldState) -> None:
         now_us = self.get_clock().now().nanoseconds // 1_000
-        if self._match_epoch_us is None:
-            if not world.perception_fresh:
-                return
-            self._match_epoch_us = now_us
-        match_time_us = max(0, now_us - self._match_epoch_us)
-        assignments = self._assign_allies(world, match_time_us)
+        match_time_us = self._match_clock.elapsed_us(now_us)
+        if match_time_us is None:
+            return
+        observations = tuple(
+            ObservedAlly(track.track_id, _track_pose(track))
+            for track in world.robots
+            if world.perception_fresh
+            and int(track.affiliation) == RobotTrack.AFFILIATION_ALLY
+        )
+        assignments = self._matcher.assign(
+            self._base_tubes,
+            observations,
+            match_time_us,
+        )
         for tube in self._base_tubes:
             track = assignments.get(tube.team_number)
             planned = sample_reservation(tube, match_time_us).pose
             if track is None or not world.perception_fresh:
                 self._tracker.missing(tube.team_number, match_time_us)
                 continue
-            observed = _track_pose(track)
             self._tracker.update(
                 tube.team_number,
                 planned,
-                observed,
+                track.pose,
                 match_time_us,
             )
         self._revision += 1
-
-    def _assign_allies(self, world: WorldState, match_time_us: int):
-        allies = [
-            track
-            for track in world.robots
-            if int(track.affiliation) == RobotTrack.AFFILIATION_ALLY
-        ]
-        candidates = []
-        for track in allies:
-            observed = _track_pose(track)
-            for tube in self._base_tubes:
-                planned = sample_reservation(tube, match_time_us).pose
-                distance = math.hypot(
-                    observed.x - planned.x,
-                    observed.y - planned.y,
-                )
-                candidates.append((distance, track.track_id, tube.team_number, track))
-        assignments = {}
-        used_tracks: set[str] = set()
-        for _, track_id, team_number, track in sorted(candidates):
-            if track_id in used_tracks or team_number in assignments:
-                continue
-            assignments[team_number] = track
-            used_tracks.add(track_id)
-        return assignments
 
     def _current_tubes(self) -> tuple[ReservationTube, ...]:
         return tuple(

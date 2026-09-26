@@ -72,7 +72,7 @@ def build_reservations(
 def find_conflicts(
     tubes: Sequence[ReservationTube],
 ) -> tuple[ReservationConflict, ...]:
-    """Return sampled time intervals where two reservation discs overlap."""
+    """Return continuous time intervals where two linearly moving discs overlap."""
     ordered = sorted(tubes, key=lambda value: value.team_number)
     conflicts: list[ReservationConflict] = []
     for first_index, first in enumerate(ordered):
@@ -96,45 +96,45 @@ def find_conflicts(
                 for sample in second.samples
                 if overlap_start <= sample.time_us <= overlap_end
             )
-            active_start: int | None = None
-            active_end = 0
-            minimum_clearance = math.inf
-            for time_us in sorted(times):
-                first_sample = _sample_tube(first, time_us)
-                second_sample = _sample_tube(second, time_us)
-                center_distance = math.hypot(
-                    first_sample.pose.x - second_sample.pose.x,
-                    first_sample.pose.y - second_sample.pose.y,
-                )
-                clearance = center_distance - (
-                    first_sample.radius_m + second_sample.radius_m
-                )
+            raw_intervals: list[tuple[float, float, float]] = []
+            breakpoints = sorted(times)
+            if len(breakpoints) == 1:
+                first_sample = _sample_tube(first, breakpoints[0])
+                second_sample = _sample_tube(second, breakpoints[0])
+                clearance = _clearance(first_sample, second_sample)
                 if clearance <= 0.0:
-                    if active_start is None:
-                        active_start = time_us
-                        minimum_clearance = clearance
-                    else:
-                        minimum_clearance = min(minimum_clearance, clearance)
-                    active_end = time_us
-                elif active_start is not None:
-                    conflicts.append(
-                        ReservationConflict(
-                            first.team_number,
-                            second.team_number,
-                            active_start,
-                            active_end,
-                            minimum_clearance,
+                    raw_intervals.append(
+                        (float(breakpoints[0]), float(breakpoints[0]), clearance)
+                    )
+            for start_us, end_us in zip(breakpoints, breakpoints[1:]):
+                first_start = _sample_tube(first, start_us)
+                first_end = _sample_tube(first, end_us)
+                second_start = _sample_tube(second, start_us)
+                second_end = _sample_tube(second, end_us)
+                for ratio_start, ratio_end, clearance in _linear_collision_intervals(
+                    first_start,
+                    first_end,
+                    second_start,
+                    second_end,
+                ):
+                    duration_us = end_us - start_us
+                    raw_intervals.append(
+                        (
+                            start_us + duration_us * ratio_start,
+                            start_us + duration_us * ratio_end,
+                            clearance,
                         )
                     )
-                    active_start = None
-                    minimum_clearance = math.inf
-            if active_start is not None:
+
+            for interval_start, interval_end, minimum_clearance in _merge_intervals(
+                raw_intervals
+            ):
                 conflicts.append(
                     ReservationConflict(
                         first.team_number,
                         second.team_number,
-                        active_start,
-                        active_end,
+                        math.floor(interval_start),
+                        math.ceil(interval_end),
                         minimum_clearance,
                     )
                 )
@@ -297,6 +297,142 @@ def _sample_tube(tube: ReservationTube, time_us: int) -> ReservationSample:
                 first.radius_m + (second.radius_m - first.radius_m) * ratio,
             )
     return tube.samples[-1]
+
+
+def _linear_collision_intervals(
+    first_start: ReservationSample,
+    first_end: ReservationSample,
+    second_start: ReservationSample,
+    second_end: ReservationSample,
+) -> tuple[tuple[float, float, float], ...]:
+    relative_x = first_start.pose.x - second_start.pose.x
+    relative_y = first_start.pose.y - second_start.pose.y
+    velocity_x = (
+        first_end.pose.x
+        - first_start.pose.x
+        - second_end.pose.x
+        + second_start.pose.x
+    )
+    velocity_y = (
+        first_end.pose.y
+        - first_start.pose.y
+        - second_end.pose.y
+        + second_start.pose.y
+    )
+    radius = first_start.radius_m + second_start.radius_m
+    radius_delta = (
+        first_end.radius_m
+        + second_end.radius_m
+        - first_start.radius_m
+        - second_start.radius_m
+    )
+    quadratic = velocity_x**2 + velocity_y**2 - radius_delta**2
+    linear = 2.0 * (
+        relative_x * velocity_x
+        + relative_y * velocity_y
+        - radius * radius_delta
+    )
+    constant = relative_x**2 + relative_y**2 - radius**2
+    roots = _quadratic_roots(quadratic, linear, constant)
+    cuts = [0.0] + [root for root in roots if 0.0 < root < 1.0] + [1.0]
+    cuts = sorted(set(cuts))
+    intervals: list[tuple[float, float, float]] = []
+    for start, end in zip(cuts, cuts[1:]):
+        midpoint = (start + end) / 2.0
+        if _polynomial(quadratic, linear, constant, midpoint) <= 1e-12:
+            intervals.append(
+                (
+                    start,
+                    end,
+                    _minimum_linear_clearance(
+                        relative_x,
+                        relative_y,
+                        velocity_x,
+                        velocity_y,
+                        radius,
+                        radius_delta,
+                        start,
+                        end,
+                    ),
+                )
+            )
+    for root in roots:
+        if 0.0 <= root <= 1.0 and abs(
+            _polynomial(quadratic, linear, constant, root)
+        ) <= 1e-10:
+            intervals.append((root, root, 0.0))
+    return tuple(_merge_intervals(intervals))
+
+
+def _quadratic_roots(quadratic: float, linear: float, constant: float) -> tuple[float, ...]:
+    if abs(quadratic) <= 1e-14:
+        if abs(linear) <= 1e-14:
+            return ()
+        return (-constant / linear,)
+    discriminant = linear**2 - 4.0 * quadratic * constant
+    if discriminant < -1e-12:
+        return ()
+    square_root = math.sqrt(max(0.0, discriminant))
+    return (
+        (-linear - square_root) / (2.0 * quadratic),
+        (-linear + square_root) / (2.0 * quadratic),
+    )
+
+
+def _polynomial(quadratic: float, linear: float, constant: float, value: float) -> float:
+    return (quadratic * value + linear) * value + constant
+
+
+def _minimum_linear_clearance(
+    relative_x: float,
+    relative_y: float,
+    velocity_x: float,
+    velocity_y: float,
+    radius: float,
+    radius_delta: float,
+    start: float,
+    end: float,
+) -> float:
+    def clearance(ratio: float) -> float:
+        return math.hypot(
+            relative_x + velocity_x * ratio,
+            relative_y + velocity_y * ratio,
+        ) - (radius + radius_delta * ratio)
+
+    low = start
+    high = end
+    for _ in range(64):
+        first_third = (2.0 * low + high) / 3.0
+        second_third = (low + 2.0 * high) / 3.0
+        if clearance(first_third) <= clearance(second_third):
+            high = second_third
+        else:
+            low = first_third
+    return min(clearance(start), clearance(end), clearance((low + high) / 2.0))
+
+
+def _merge_intervals(
+    intervals: Sequence[tuple[float, float, float]],
+) -> tuple[tuple[float, float, float], ...]:
+    merged: list[tuple[float, float, float]] = []
+    for start, end, clearance in sorted(intervals):
+        if not merged or start > merged[-1][1] + 1e-9:
+            merged.append((start, end, clearance))
+            continue
+        previous_start, previous_end, previous_clearance = merged[-1]
+        merged[-1] = (
+            previous_start,
+            max(previous_end, end),
+            min(previous_clearance, clearance),
+        )
+    return tuple(merged)
+
+
+def _clearance(first: ReservationSample, second: ReservationSample) -> float:
+    return math.hypot(
+        first.pose.x - second.pose.x,
+        first.pose.y - second.pose.y,
+    ) - (first.radius_m + second.radius_m)
 
 
 def _interpolate_path(path: tuple[TimedPose, ...], time_us: int) -> Pose2d:

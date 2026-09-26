@@ -22,7 +22,9 @@ sağlar.
    limitlerini girin.
 2. Aktif robot ve segmenti seçip alan üzerine yol noktaları ekleyin. Noktalar
    sürüklenebilir; ok tuşlarıyla hassas hareket ettirilebilir.
-3. Görev, başlangıç zamanı, süre ve güvenlik koridorunu ayarlayın.
+3. Görev, başlangıç zamanı, süre ve güvenlik koridorunu ayarlayın. İçe aktarılan
+   başlangıç pencereleri ve fallback bağlantıları arayüzde değiştirilmeseler de
+   JSON round-trip sırasında kayıpsız korunur.
 4. Sağ panelde hareket limiti hatalarını ve zaman bağımlı koridor
    çakışmalarını giderin.
 5. `JSON indir` ile Jetson'ın doğrudan doğruladığı schema-1 planı, `PNG indir`

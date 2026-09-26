@@ -138,6 +138,28 @@ class AlliancePlanSchemaTest(unittest.TestCase):
         duplicate_team["robots"].append(second_robot)
         cases.append(("duplicate team", duplicate_team))
 
+        teleport = valid_plan_dict()
+        teleport["robots"][0]["segments"][1]["path"][0]["x"] = 10.0
+        teleport["robots"][0]["segments"][1]["path"][1]["x"] = 10.0
+        cases.append(("segment teleport", teleport))
+
+        boundary_acceleration = valid_plan_dict()
+        boundary_acceleration["robots"][0]["max_acceleration_mps2"] = 1.5
+        boundary_acceleration["robots"][0]["segments"][1]["path"][1]["x"] = 0.0
+        cases.append(("boundary acceleration", boundary_acceleration))
+
+        team_wire_overflow = valid_plan_dict()
+        team_wire_overflow["robots"][0]["team_number"] = 2_147_483_648
+        cases.append(("team wire range", team_wire_overflow))
+
+        time_wire_overflow = valid_plan_dict()
+        first_segment = time_wire_overflow["robots"][0]["segments"][0]
+        first_segment["fallback_segment_id"] = ""
+        first_segment["expected_duration_us"] = 9_223_372_036_854_775_808
+        first_segment["path"][1]["time_us"] = 9_223_372_036_854_775_808
+        time_wire_overflow["robots"][0]["segments"] = [first_segment]
+        cases.append(("time wire range", time_wire_overflow))
+
         for name, data in cases:
             with self.subTest(name=name):
                 with self.assertRaises(PlanValidationError):

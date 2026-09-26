@@ -13,6 +13,8 @@ SCHEMA_VERSION = 1
 FIELD_VERSION = "2018-power-up-v1"
 FIELD_LENGTH_M = 16.46
 FIELD_WIDTH_M = 8.23
+INT32_MAX = 2_147_483_647
+INT64_MAX = 9_223_372_036_854_775_807
 VALID_ALLIANCES = frozenset(("blue", "red"))
 VALID_TASKS = frozenset(
     (
@@ -277,8 +279,8 @@ def _validate_plan(plan: AlliancePlan) -> None:
 
 
 def _validate_robot(robot: RobotPlan) -> None:
-    if robot.team_number <= 0:
-        raise PlanValidationError("team_number must be positive")
+    if not 0 < robot.team_number <= INT32_MAX:
+        raise PlanValidationError("team_number is outside the ROS int32 range")
     if not robot.robot_label.strip():
         raise PlanValidationError("robot_label cannot be blank")
     _validate_field_pose(robot.start_pose, f"robot {robot.team_number} start_pose")
@@ -292,15 +294,20 @@ def _validate_robot(robot: RobotPlan) -> None:
         raise PlanValidationError("robot plan must contain at least one segment")
 
     segment_ids: set[str] = set()
-    previous_end_us = -1
+    previous_segment: PlanSegment | None = None
     for segment in robot.segments:
         if segment.segment_id in segment_ids:
             raise PlanValidationError(f"duplicate segment_id {segment.segment_id}")
         segment_ids.add(segment.segment_id)
         _validate_segment(segment, robot)
-        if segment.path[0].time_us < previous_end_us:
+        if (
+            previous_segment is not None
+            and segment.path[0].time_us < previous_segment.path[-1].time_us
+        ):
             raise PlanValidationError("robot plan segments overlap in time")
-        previous_end_us = segment.path[-1].time_us
+        if previous_segment is not None:
+            _validate_segment_transition(previous_segment, segment, robot)
+        previous_segment = segment
 
     for segment in robot.segments:
         if segment.fallback_segment_id and segment.fallback_segment_id not in segment_ids:
@@ -315,9 +322,13 @@ def _validate_segment(segment: PlanSegment, robot: RobotPlan) -> None:
         raise PlanValidationError("segment_id cannot be blank")
     if segment.task not in VALID_TASKS:
         raise PlanValidationError(f"unsupported task {segment.task}")
-    if segment.earliest_start_us < 0 or segment.latest_start_us < segment.earliest_start_us:
+    if (
+        segment.earliest_start_us < 0
+        or segment.latest_start_us < segment.earliest_start_us
+        or segment.latest_start_us > INT64_MAX
+    ):
         raise PlanValidationError("segment start window is invalid")
-    if segment.expected_duration_us <= 0:
+    if not 0 < segment.expected_duration_us <= INT64_MAX:
         raise PlanValidationError("segment expected duration must be positive")
     if segment.corridor_radius_m < 0.0:
         raise PlanValidationError("segment corridor radius cannot be negative")
@@ -330,8 +341,10 @@ def _validate_segment(segment: PlanSegment, robot: RobotPlan) -> None:
 
     velocities: list[tuple[float, float, float]] = []
     previous = segment.path[0]
+    _validate_time_us(previous.time_us)
     _validate_field_pose(previous.pose, f"segment {segment.segment_id}")
     for point in segment.path[1:]:
+        _validate_time_us(point.time_us)
         _validate_field_pose(point.pose, f"segment {segment.segment_id}")
         delta_us = point.time_us - previous.time_us
         if delta_us <= 0:
@@ -350,6 +363,57 @@ def _validate_segment(segment: PlanSegment, robot: RobotPlan) -> None:
         acceleration = math.hypot(current[0] - prior[0], current[1] - prior[1]) / sample_seconds
         if acceleration > robot.max_acceleration_mps2 + 1e-9:
             raise PlanValidationError("path exceeds robot acceleration limit")
+
+
+def _validate_segment_transition(
+    previous: PlanSegment,
+    current: PlanSegment,
+    robot: RobotPlan,
+) -> None:
+    previous_end = previous.path[-1]
+    current_start = current.path[0]
+    if math.hypot(
+        current_start.pose.x - previous_end.pose.x,
+        current_start.pose.y - previous_end.pose.y,
+    ) > 1e-9:
+        raise PlanValidationError("consecutive segment endpoints are disconnected")
+
+    prior_velocity = _path_velocity(previous.path[-2], previous.path[-1])
+    current_velocity = _path_velocity(current.path[0], current.path[1])
+    gap_seconds = (current_start.time_us - previous_end.time_us) / 1e6
+    if gap_seconds > 0.0:
+        _validate_acceleration(prior_velocity, (0.0, 0.0, gap_seconds), robot)
+        _validate_acceleration((0.0, 0.0, gap_seconds), current_velocity, robot)
+    else:
+        _validate_acceleration(prior_velocity, current_velocity, robot)
+
+
+def _path_velocity(first: TimedPose, second: TimedPose) -> tuple[float, float, float]:
+    delta_seconds = (second.time_us - first.time_us) / 1e6
+    return (
+        (second.pose.x - first.pose.x) / delta_seconds,
+        (second.pose.y - first.pose.y) / delta_seconds,
+        delta_seconds,
+    )
+
+
+def _validate_acceleration(
+    previous: tuple[float, float, float],
+    current: tuple[float, float, float],
+    robot: RobotPlan,
+) -> None:
+    sample_seconds = (previous[2] + current[2]) / 2.0
+    acceleration = math.hypot(
+        current[0] - previous[0],
+        current[1] - previous[1],
+    ) / sample_seconds
+    if acceleration > robot.max_acceleration_mps2 + 1e-9:
+        raise PlanValidationError("path exceeds robot acceleration limit at segment boundary")
+
+
+def _validate_time_us(value: int) -> None:
+    if not 0 <= value <= INT64_MAX:
+        raise PlanValidationError("path timestamp is outside the ROS int64 range")
 
 
 def _validate_fallback_graph(segments: tuple[PlanSegment, ...]) -> None:

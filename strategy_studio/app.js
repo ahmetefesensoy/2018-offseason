@@ -15,11 +15,11 @@ const ROBOT_COLORS = ["#2dd4ff", "#a879ff"];
 function pythonFloat(value) {
   if (!Number.isFinite(value)) throw new Error("Kanonik belgede sonlu olmayan sayı var.");
   if (Object.is(value, -0)) return "-0.0";
-  if (Number.isInteger(value)) return `${value}.0`;
   const magnitude = Math.abs(value);
-  let text = magnitude !== 0 && (magnitude < 1e-4 || magnitude >= 1e16)
-    ? value.toExponential()
-    : String(value);
+  if (!(magnitude !== 0 && (magnitude < 1e-4 || magnitude >= 1e16))) {
+    return Number.isInteger(value) ? `${value}.0` : String(value);
+  }
+  const text = value.toExponential();
   return text.replace(/e([+-]?)(\d+)$/i, (_, sign, exponent) => {
     const normalizedSign = sign || "+";
     return `e${normalizedSign}${exponent.padStart(2, "0")}`;
@@ -59,8 +59,10 @@ function makeSegment(index, startSeconds = 0) {
     task: "CROSS_LINE",
     targetId: "auto-line",
     startSeconds,
+    latestStartSeconds: startSeconds,
     durationSeconds: 2,
     corridorRadius: 0.2,
+    fallbackSegmentId: "",
     points: [],
   };
 }
@@ -74,6 +76,7 @@ function makeRobot(index) {
     maxVelocity: 2,
     maxAcceleration: 4,
     initialConfidence: index === 0 ? 0.85 : 0.75,
+    startPose: null,
     segments: [makeSegment(0)],
   };
 }
@@ -94,36 +97,36 @@ function canonicalPayload(state) {
     alliance: state.alliance,
     plan_id: state.planId.trim(),
     robots: state.robots.map((robot) => {
-      const firstPoint = robot.segments[0]?.points[0] || { x: 0, y: 0, heading: 0 };
+      const firstPoint = robot.startPose || robot.segments[0]?.points[0] || { x: 0, y: 0, heading: 0 };
       return {
         team_number: Math.trunc(robot.teamNumber),
         robot_label: robot.label.trim(),
         start_pose: {
-          x: round(firstPoint.x),
-          y: round(firstPoint.y),
-          heading: round(firstPoint.heading),
+          x: firstPoint.x,
+          y: firstPoint.y,
+          heading: firstPoint.heading,
         },
         footprint: {
-          length_m: round(robot.footprintLength),
-          width_m: round(robot.footprintWidth),
+          length_m: robot.footprintLength,
+          width_m: robot.footprintWidth,
         },
-        max_velocity_mps: round(robot.maxVelocity),
-        max_acceleration_mps2: round(robot.maxAcceleration),
-        initial_confidence: round(robot.initialConfidence),
+        max_velocity_mps: robot.maxVelocity,
+        max_acceleration_mps2: robot.maxAcceleration,
+        initial_confidence: robot.initialConfidence,
         segments: robot.segments.map((segment) => ({
           segment_id: segment.id.trim(),
           task: segment.task,
           target_id: segment.targetId.trim(),
           earliest_start_us: Math.round(segment.startSeconds * 1e6),
-          latest_start_us: Math.round(segment.startSeconds * 1e6),
+          latest_start_us: Math.round(segment.latestStartSeconds * 1e6),
           expected_duration_us: Math.round(segment.durationSeconds * 1e6),
-          corridor_radius_m: round(segment.corridorRadius),
-          fallback_segment_id: "",
+          corridor_radius_m: segment.corridorRadius,
+          fallback_segment_id: segment.fallbackSegmentId,
           path: segment.points.map((point) => ({
             time_us: Math.round(point.timeUs),
-            x: round(point.x),
-            y: round(point.y),
-            heading: round(point.heading),
+            x: point.x,
+            y: point.y,
+            heading: point.heading,
           })),
         })),
       };
@@ -141,17 +144,26 @@ function validateState(state) {
   state.robots.forEach((robot) => {
     const prefix = `#${robot.teamNumber || "?"}`;
     if (!Number.isInteger(robot.teamNumber) || robot.teamNumber <= 0) errors.push(`${prefix}: takım numarası geçersiz.`);
+    if (robot.teamNumber > 2147483647) errors.push(`${prefix}: takım numarası ROS int32 sınırını aşıyor.`);
     if (teamNumbers.has(robot.teamNumber)) errors.push(`${prefix}: takım numarası tekrarlanıyor.`);
     teamNumbers.add(robot.teamNumber);
     if (!robot.label.trim()) errors.push(`${prefix}: robot etiketi boş.`);
     if (labels.has(robot.label.trim())) errors.push(`${prefix}: robot etiketi tekrarlanıyor.`);
     labels.add(robot.label.trim());
+    const effectiveStartPose = robot.startPose || robot.segments[0]?.points[0];
+    if (!effectiveStartPose || ![effectiveStartPose.x, effectiveStartPose.y, effectiveStartPose.heading].every(Number.isFinite)) {
+      errors.push(`${prefix}: başlangıç pozu sonlu olmalı.`);
+    } else if (effectiveStartPose.x < 0 || effectiveStartPose.x > FIELD_LENGTH_M || effectiveStartPose.y < 0 || effectiveStartPose.y > FIELD_WIDTH_M) {
+      errors.push(`${prefix}: başlangıç pozu alan dışında.`);
+    }
+    if (![robot.footprintLength, robot.footprintWidth, robot.maxVelocity, robot.maxAcceleration, robot.initialConfidence].every(Number.isFinite)) errors.push(`${prefix}: robot parametreleri sonlu olmalı.`);
     if (robot.footprintLength <= 0 || robot.footprintWidth <= 0) errors.push(`${prefix}: gövde ölçüleri pozitif olmalı.`);
     if (robot.maxVelocity <= 0 || robot.maxAcceleration <= 0) errors.push(`${prefix}: hareket limitleri pozitif olmalı.`);
     if (robot.initialConfidence < 0 || robot.initialConfidence > 1) errors.push(`${prefix}: güven [0,1] aralığında olmalı.`);
     if (!robot.segments.length) errors.push(`${prefix}: en az bir segment gerekli.`);
     const ids = new Set();
     let previousEnd = -1;
+    let previousSegment = null;
     robot.segments.forEach((segment) => {
       const name = `${prefix}/${segment.id || "segment"}`;
       if (!segment.id.trim() || ids.has(segment.id.trim())) errors.push(`${name}: segment kimliği boş veya tekrarlı.`);
@@ -161,19 +173,26 @@ function validateState(state) {
       if (segment.corridorRadius < 0) errors.push(`${name}: koridor yarıçapı negatif olamaz.`);
       if (segment.points.length < 2) errors.push(`${name}: en az iki yol noktası gerekli.`);
       const startUs = Math.round(segment.startSeconds * 1e6);
-      const endUs = startUs + Math.round(segment.durationSeconds * 1e6);
+      const latestStartUs = Math.round(segment.latestStartSeconds * 1e6);
+      const durationUs = Math.round(segment.durationSeconds * 1e6);
+      if (!Number.isSafeInteger(startUs) || !Number.isSafeInteger(latestStartUs) || !Number.isSafeInteger(durationUs)) errors.push(`${name}: zaman tarayıcının güvenli tamsayı sınırını aşıyor.`);
+      if (latestStartUs < startUs) errors.push(`${name}: başlangıç penceresi geçersiz.`);
       if (startUs < previousEnd) errors.push(`${name}: önceki segmentle zaman çakışması var.`);
-      previousEnd = endUs;
+      if (segment.points.length) {
+        if (segment.points[0].timeUs < startUs || segment.points[0].timeUs > latestStartUs) errors.push(`${name}: rota başlangıç penceresi dışında.`);
+        if (segment.points[segment.points.length - 1].timeUs - segment.points[0].timeUs > durationUs) errors.push(`${name}: rota beklenen süreyi aşıyor.`);
+      }
+      previousEnd = segment.points.length ? segment.points[segment.points.length - 1].timeUs : startUs + durationUs;
       let previousVelocity = null;
       segment.points.forEach((point, index) => {
         if (![point.x, point.y, point.heading, point.timeUs].every(Number.isFinite)) {
           errors.push(`${name}: sonlu olmayan yol noktası var.`);
           return;
         }
+        if (!Number.isSafeInteger(point.timeUs) || point.timeUs < 0) errors.push(`${name}: nokta zamanı güvenli tamsayı değil.`);
         if (point.x < 0 || point.x > FIELD_LENGTH_M || point.y < 0 || point.y > FIELD_WIDTH_M) {
           errors.push(`${name}: ${index + 1}. nokta alan dışında.`);
         }
-        if (point.timeUs < startUs || point.timeUs > endUs) errors.push(`${name}: nokta zamanı segment dışında.`);
         if (index > 0) {
           const before = segment.points[index - 1];
           const dt = (point.timeUs - before.timeUs) / 1e6;
@@ -192,6 +211,55 @@ function validateState(state) {
           }
         }
       });
+      if (previousSegment && previousSegment.points.length >= 2 && segment.points.length >= 2) {
+        const previousPoint = previousSegment.points[previousSegment.points.length - 1];
+        const currentPoint = segment.points[0];
+        if (Math.hypot(currentPoint.x - previousPoint.x, currentPoint.y - previousPoint.y) > 1e-9) {
+          errors.push(`${name}: önceki segmentle uç noktalar kopuk.`);
+        }
+        const priorBefore = previousSegment.points[previousSegment.points.length - 2];
+        const currentAfter = segment.points[1];
+        const priorDt = (previousPoint.timeUs - priorBefore.timeUs) / 1e6;
+        const currentDt = (currentAfter.timeUs - currentPoint.timeUs) / 1e6;
+        const gap = (currentPoint.timeUs - previousPoint.timeUs) / 1e6;
+        if (priorDt > 0 && currentDt > 0 && gap >= 0) {
+          const priorVelocity = {
+            vx: (previousPoint.x - priorBefore.x) / priorDt,
+            vy: (previousPoint.y - priorBefore.y) / priorDt,
+            dt: priorDt,
+          };
+          const nextVelocity = {
+            vx: (currentAfter.x - currentPoint.x) / currentDt,
+            vy: (currentAfter.y - currentPoint.y) / currentDt,
+            dt: currentDt,
+          };
+          const transitionAcceleration = (first, second) => Math.hypot(
+            second.vx - first.vx,
+            second.vy - first.vy,
+          ) / ((first.dt + second.dt) / 2);
+          const excessive = gap > 0
+            ? transitionAcceleration(priorVelocity, { vx: 0, vy: 0, dt: gap }) > robot.maxAcceleration + 1e-9 ||
+              transitionAcceleration({ vx: 0, vy: 0, dt: gap }, nextVelocity) > robot.maxAcceleration + 1e-9
+            : transitionAcceleration(priorVelocity, nextVelocity) > robot.maxAcceleration + 1e-9;
+          if (excessive) errors.push(`${name}: segment sınırında azami ivme aşılıyor.`);
+        }
+      }
+      previousSegment = segment;
+    });
+    robot.segments.forEach((segment) => {
+      if (segment.fallbackSegmentId && !ids.has(segment.fallbackSegmentId)) {
+        errors.push(`${prefix}/${segment.id}: fallback segmenti bulunamadı.`);
+      }
+      const visited = new Set();
+      let current = segment;
+      while (current?.fallbackSegmentId) {
+        if (visited.has(current.id)) {
+          errors.push(`${prefix}/${segment.id}: fallback döngüsü var.`);
+          break;
+        }
+        visited.add(current.id);
+        current = robot.segments.find((candidate) => candidate.id === current.fallbackSegmentId);
+      }
     });
   });
   return [...new Set(errors)];
@@ -249,30 +317,125 @@ function analyzeConflicts(state, periodUs = 100000) {
       const start = Math.max(firstPoints[0].timeUs, secondPoints[0].timeUs);
       const end = Math.min(firstPoints[firstPoints.length - 1].timeUs, secondPoints[secondPoints.length - 1].timeUs);
       if (start > end) continue;
-      let active = null;
-      for (let timeUs = start; timeUs <= end + periodUs; timeUs += periodUs) {
-        const sampleTime = Math.min(timeUs, end);
-        const firstPose = sampleRobot(first, sampleTime);
-        const secondPose = sampleRobot(second, sampleTime);
-        const clearance = Math.hypot(firstPose.x - secondPose.x, firstPose.y - secondPose.y) - firstPose.radius - secondPose.radius;
-        if (clearance <= 0) {
-          if (!active) active = { startUs: sampleTime, endUs: sampleTime, minimumClearance: clearance, x: 0, y: 0 };
-          active.endUs = sampleTime;
-          if (clearance <= active.minimumClearance) {
-            active.minimumClearance = clearance;
-            active.x = (firstPose.x + secondPose.x) / 2;
-            active.y = (firstPose.y + secondPose.y) / 2;
-          }
-        } else if (active) {
-          conflicts.push({ firstIndex, secondIndex, ...active });
-          active = null;
+      const breakpoints = [...new Set([
+        start,
+        end,
+        ...firstPoints.map((point) => point.timeUs).filter((timeUs) => timeUs >= start && timeUs <= end),
+        ...secondPoints.map((point) => point.timeUs).filter((timeUs) => timeUs >= start && timeUs <= end),
+      ])].sort((left, right) => left - right);
+      const rawIntervals = [];
+      for (let index = 1; index < breakpoints.length; index += 1) {
+        const intervalStart = breakpoints[index - 1];
+        const intervalEnd = breakpoints[index];
+        const firstStart = sampleRobot(first, intervalStart);
+        const firstEnd = sampleRobot(first, intervalEnd);
+        const secondStart = sampleRobot(second, intervalStart);
+        const secondEnd = sampleRobot(second, intervalEnd);
+        for (const interval of linearCollisionIntervals(firstStart, firstEnd, secondStart, secondEnd)) {
+          const durationUs = intervalEnd - intervalStart;
+          const collisionTime = intervalStart + durationUs * interval.minimumRatio;
+          const firstMinimum = sampleRobot(first, collisionTime);
+          const secondMinimum = sampleRobot(second, collisionTime);
+          rawIntervals.push({
+            startUs: intervalStart + durationUs * interval.start,
+            endUs: intervalStart + durationUs * interval.end,
+            minimumClearance: interval.minimumClearance,
+            x: (firstMinimum.x + secondMinimum.x) / 2,
+            y: (firstMinimum.y + secondMinimum.y) / 2,
+          });
         }
-        if (sampleTime === end) break;
       }
-      if (active) conflicts.push({ firstIndex, secondIndex, ...active });
+      mergeConflictIntervals(rawIntervals).forEach((interval) => {
+        conflicts.push({ firstIndex, secondIndex, ...interval });
+      });
     }
   }
   return conflicts;
+}
+
+function linearCollisionIntervals(firstStart, firstEnd, secondStart, secondEnd) {
+  const relativeX = firstStart.x - secondStart.x;
+  const relativeY = firstStart.y - secondStart.y;
+  const velocityX = firstEnd.x - firstStart.x - secondEnd.x + secondStart.x;
+  const velocityY = firstEnd.y - firstStart.y - secondEnd.y + secondStart.y;
+  const radius = firstStart.radius + secondStart.radius;
+  const radiusDelta = firstEnd.radius + secondEnd.radius - radius;
+  const quadratic = velocityX ** 2 + velocityY ** 2 - radiusDelta ** 2;
+  const linear = 2 * (relativeX * velocityX + relativeY * velocityY - radius * radiusDelta);
+  const constant = relativeX ** 2 + relativeY ** 2 - radius ** 2;
+  const roots = quadraticRoots(quadratic, linear, constant);
+  const cuts = [...new Set([0, ...roots.filter((root) => root > 0 && root < 1), 1])].sort((left, right) => left - right);
+  const intervals = [];
+  for (let index = 1; index < cuts.length; index += 1) {
+    const start = cuts[index - 1];
+    const end = cuts[index];
+    if (polynomial(quadratic, linear, constant, (start + end) / 2) <= 1e-12) {
+      let low = start;
+      let high = end;
+      const clearance = (ratio) => Math.hypot(
+        relativeX + velocityX * ratio,
+        relativeY + velocityY * ratio,
+      ) - (radius + radiusDelta * ratio);
+      for (let iteration = 0; iteration < 64; iteration += 1) {
+        const firstThird = (2 * low + high) / 3;
+        const secondThird = (low + 2 * high) / 3;
+        if (clearance(firstThird) <= clearance(secondThird)) high = secondThird;
+        else low = firstThird;
+      }
+      const minimumRatio = (low + high) / 2;
+      intervals.push({ start, end, minimumRatio, minimumClearance: Math.min(clearance(start), clearance(end), clearance(minimumRatio)) });
+    }
+  }
+  roots.filter((root) => root >= 0 && root <= 1 && Math.abs(polynomial(quadratic, linear, constant, root)) <= 1e-10)
+    .forEach((root) => intervals.push({ start: root, end: root, minimumRatio: root, minimumClearance: 0 }));
+  return mergeRatioIntervals(intervals);
+}
+
+function quadraticRoots(quadratic, linear, constant) {
+  if (Math.abs(quadratic) <= 1e-14) return Math.abs(linear) <= 1e-14 ? [] : [-constant / linear];
+  const discriminant = linear ** 2 - 4 * quadratic * constant;
+  if (discriminant < -1e-12) return [];
+  const squareRoot = Math.sqrt(Math.max(0, discriminant));
+  return [(-linear - squareRoot) / (2 * quadratic), (-linear + squareRoot) / (2 * quadratic)];
+}
+
+function polynomial(quadratic, linear, constant, value) {
+  return (quadratic * value + linear) * value + constant;
+}
+
+function mergeRatioIntervals(intervals) {
+  const merged = [];
+  [...intervals].sort((left, right) => left.start - right.start).forEach((interval) => {
+    const previous = merged[merged.length - 1];
+    if (!previous || interval.start > previous.end + 1e-9) {
+      merged.push({ ...interval });
+    } else {
+      previous.end = Math.max(previous.end, interval.end);
+      if (interval.minimumClearance < previous.minimumClearance) {
+        previous.minimumClearance = interval.minimumClearance;
+        previous.minimumRatio = interval.minimumRatio;
+      }
+    }
+  });
+  return merged;
+}
+
+function mergeConflictIntervals(intervals) {
+  const merged = [];
+  [...intervals].sort((left, right) => left.startUs - right.startUs).forEach((interval) => {
+    const previous = merged[merged.length - 1];
+    if (!previous || interval.startUs > previous.endUs + 1e-6) {
+      merged.push({ ...interval });
+    } else {
+      previous.endUs = Math.max(previous.endUs, interval.endUs);
+      if (interval.minimumClearance < previous.minimumClearance) {
+        previous.minimumClearance = interval.minimumClearance;
+        previous.x = interval.x;
+        previous.y = interval.y;
+      }
+    }
+  });
+  return merged;
 }
 
 function importCanonicalDocument(document) {
@@ -291,13 +454,20 @@ function importCanonicalDocument(document) {
       maxVelocity: Number(robot.max_velocity_mps),
       maxAcceleration: Number(robot.max_acceleration_mps2),
       initialConfidence: Number(robot.initial_confidence),
+      startPose: {
+        x: Number(robot.start_pose?.x),
+        y: Number(robot.start_pose?.y),
+        heading: Number(robot.start_pose?.heading),
+      },
       segments: (robot.segments || []).map((segment) => ({
         id: String(segment.segment_id || ""),
         task: segment.task,
         targetId: String(segment.target_id || ""),
         startSeconds: Number(segment.earliest_start_us) / 1e6,
+        latestStartSeconds: Number(segment.latest_start_us) / 1e6,
         durationSeconds: Number(segment.expected_duration_us) / 1e6,
         corridorRadius: Number(segment.corridor_radius_m),
+        fallbackSegmentId: String(segment.fallback_segment_id || ""),
         points: (segment.path || []).map((point) => ({
           timeUs: Number(point.time_us),
           x: Number(point.x),
@@ -698,7 +868,11 @@ if (typeof document !== "undefined") {
   });
   bindInput(elements.task, () => { currentSegment().task = elements.task.value; }, true);
   bindInput(elements.targetId, () => { currentSegment().targetId = elements.targetId.value; });
-  bindInput(elements.startTime, () => { currentSegment().startSeconds = numeric(elements.startTime); retimeSegment(currentSegment()); });
+  bindInput(elements.startTime, () => {
+    currentSegment().startSeconds = numeric(elements.startTime);
+    currentSegment().latestStartSeconds = currentSegment().startSeconds;
+    retimeSegment(currentSegment());
+  });
   bindInput(elements.duration, () => { currentSegment().durationSeconds = numeric(elements.duration); retimeSegment(currentSegment()); });
   bindInput(elements.corridorRadius, () => { currentSegment().corridorRadius = numeric(elements.corridorRadius); });
   elements.segmentSelect.addEventListener("change", () => { activeSegment = Number(elements.segmentSelect.value); selectedPoint = null; renderControls(); updateAll(); });
@@ -775,8 +949,10 @@ if (typeof document !== "undefined") {
         task,
         targetId: targetText || "auto-line",
         startSeconds: rows[start].time,
+        latestStartSeconds: rows[start].time,
         durationSeconds: rows[end].time - rows[start].time,
         corridorRadius: 0.2,
+        fallbackSegmentId: "",
         points: rows.slice(start, end + 1).map((row) => ({ timeUs: Math.round(row.time * 1e6), x: row.x, y: row.y, heading: round(row.heading * Math.PI / 180) })),
       };
     });

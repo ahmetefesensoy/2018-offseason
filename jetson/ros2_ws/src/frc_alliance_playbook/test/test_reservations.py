@@ -125,6 +125,37 @@ class ReservationSamplingTest(unittest.TestCase):
 
         self.assertEqual((), find_conflicts(tubes))
 
+    def test_detects_collision_between_reservation_sample_timestamps(self):
+        tubes = (
+            ReservationTube(
+                plan_id="test",
+                team_number=254,
+                robot_label="first",
+                confidence=0.8,
+                samples=(
+                    ReservationSample(0, Pose2d(0.0, 0.0, 0.0), 0.05),
+                    ReservationSample(100_000, Pose2d(1.0, 0.0, 0.0), 0.05),
+                ),
+            ),
+            ReservationTube(
+                plan_id="test",
+                team_number=1678,
+                robot_label="second",
+                confidence=0.8,
+                samples=(
+                    ReservationSample(0, Pose2d(0.5, 1.0, 0.0), 0.05),
+                    ReservationSample(100_000, Pose2d(0.5, -1.0, 0.0), 0.05),
+                ),
+            ),
+        )
+
+        conflicts = find_conflicts(tubes)
+
+        self.assertEqual(1, len(conflicts))
+        self.assertLess(conflicts[0].start_us, 50_000)
+        self.assertGreater(conflicts[0].end_us, 50_000)
+        self.assertAlmostEqual(-0.1, conflicts[0].minimum_clearance_m, places=6)
+
     def test_sampling_outside_tube_holds_endpoint_pose(self):
         tube = build_reservations(
             alliance_plan(robot_plan(254, x_start=1.0, x_end=2.0)),

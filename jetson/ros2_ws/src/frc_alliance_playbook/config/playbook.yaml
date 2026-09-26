@@ -7,3 +7,4 @@ alliance_playbook:
     corridor_tolerance_m: 0.20
     deviation_scale_m: 0.75
     missing_half_life_us: 1000000
+    missing_binding_grace_us: 1000000

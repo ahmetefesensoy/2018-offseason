@@ -57,7 +57,8 @@ python -m http.server 8080
 - en fazla iki takım robotu ve birden çok görev segmenti düzenlenir;
 - alana tıklayarak nokta eklenir, sürükleyerek veya ok tuşuyla taşınır;
 - hız, ivme, alan sınırı ve zaman hataları anında gösterilir;
-- gövde + koridor yarıçapları 100 ms örneklenerek zamansal çakışmalar bulunur;
+- gövde + koridor tüpleri 100 ms örneklenir; örnekler arasındaki doğrusal hareket
+  analitik olarak çözülerek aradaki çarpışmalar da bulunur;
 - kanonik JSON, doğrulayıcıyla uyumlu SHA-256 ve PNG sunum görseli indirilir;
 - dosyalar yalnız tarayıcıda işlenir ve dışarı yüklenmez.
 
@@ -155,11 +156,15 @@ ros2 topic echo /alliance/markers
 - aynı zamanda üst üste gelen kırmızı rezervasyon bölgeleri;
 - algılanan dost robottan en yakın plan koridoruna sapma çizgisi.
 
-İlk taze `/world/state`, demo plan zamanının sıfırını başlatır. Üretim sisteminde
-bu epoch Driver Station autonomous başlangıç olayıyla bağlanmalıdır. Algılanan
-dost robot, o andaki plan konumlarına deterministik en-yakın atamayla eşlenir.
-Koridor dışı sapma üstel olarak güveni düşürür; kayıp gözlem her yapılandırılmış
-yarı ömürde güveni yarılar. Güven hiçbir gözlemle kendiliğinden yükselmez.
+`/autonomy/status.mode` değerinin `DISABLED/TELEOP` durumundan `AUTONOMOUS`
+durumuna geçişi plan zamanının sıfırını başlatır; simülasyonda
+`AUTONOMOUS_SIM` aynı sözleşmeyi kullanır. Mode otonomdan çıktığında füzyon
+durumu temizlenir. ROS saati geriye sarılırsa (örneğin rosbag tekrarında) yeni
+bir epoch açılır. Algılanan dost robot ilk anda deterministik en-yakın rotaya
+eşlenir, ardından sabit `track_id` bağı korunur; robotlar kesiştiğinde kimlikler
+yer değiştirmez. Koridor dışı sapma üstel olarak güveni düşürür; kayıp gözlem
+her yapılandırılmış yarı ömürde güveni yarılar. Güven hiçbir gözlemle
+kendiliğinden yükselmez.
 
 ## Rosbag
 
