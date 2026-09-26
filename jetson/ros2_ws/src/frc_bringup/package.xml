@@ -8,6 +8,7 @@
 
   <buildtool_depend>ament_python</buildtool_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>frc_alliance_playbook</exec_depend>
   <exec_depend>frc_autonomy_msgs</exec_depend>
   <exec_depend>frc_nt_bridge</exec_depend>
   <exec_depend>frc_robot_description</exec_depend>

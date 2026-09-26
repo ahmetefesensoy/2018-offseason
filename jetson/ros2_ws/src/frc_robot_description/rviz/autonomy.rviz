@@ -77,6 +77,11 @@ Visualization Manager:
       Name: Tracked Perception World
       Topic:
         Value: /world/markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Alliance Reservations
+      Topic:
+        Value: /alliance/markers
   Global Options:
     Background Color: 28; 30; 36
     Fixed Frame: map

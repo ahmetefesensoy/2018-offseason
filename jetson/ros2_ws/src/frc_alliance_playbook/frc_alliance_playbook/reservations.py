@@ -141,6 +141,20 @@ def find_conflicts(
     return tuple(conflicts)
 
 
+def sample_reservation(tube: ReservationTube, time_us: int) -> ReservationSample:
+    """Sample a tube at match time, holding its first/last pose outside its span."""
+    if not tube.samples:
+        raise ValueError("reservation tube contains no samples")
+    clamped_time_us = min(
+        max(time_us, tube.samples[0].time_us),
+        tube.samples[-1].time_us,
+    )
+    sample = _sample_tube(tube, clamped_time_us)
+    if clamped_time_us == time_us:
+        return sample
+    return ReservationSample(time_us, sample.pose, sample.radius_m)
+
+
 class ConfidenceTracker:
     """Monotonically reduce plan trust as observations deviate or disappear."""
 

@@ -7,6 +7,7 @@ from frc_alliance_playbook.reservations import (
     ReservationTube,
     build_reservations,
     find_conflicts,
+    sample_reservation,
 )
 from frc_alliance_playbook.schema import (
     AlliancePlan,
@@ -123,6 +124,18 @@ class ReservationSamplingTest(unittest.TestCase):
         )
 
         self.assertEqual((), find_conflicts(tubes))
+
+    def test_sampling_outside_tube_holds_endpoint_pose(self):
+        tube = build_reservations(
+            alliance_plan(robot_plan(254, x_start=1.0, x_end=2.0)),
+            sample_period_us=100_000,
+        )[0]
+
+        before = sample_reservation(tube, -100_000)
+        after = sample_reservation(tube, 300_000)
+
+        self.assertEqual((-100_000, 1.0), (before.time_us, before.pose.x))
+        self.assertEqual((300_000, 2.0), (after.time_us, after.pose.x))
 
 
 class ConfidenceTrackerTest(unittest.TestCase):

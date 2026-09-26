@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "field_version": "2018-power-up-v1",
+  "alliance": "blue",
+  "plan_id": "demo-blue-alliance",
+  "content_sha256": "86d0e7a307ee5b44b93344a47a8758384a2c3c4379269808639bc13dc23e5be2",
+  "robots": [
+    {
+      "team_number": 254,
+      "robot_label": "ally-left",
+      "start_pose": {"x": 1.0, "y": 4.5, "heading": 0.0},
+      "footprint": {"length_m": 0.9, "width_m": 0.9},
+      "max_velocity_mps": 2.0,
+      "max_acceleration_mps2": 4.0,
+      "initial_confidence": 0.85,
+      "segments": [
+        {
+          "segment_id": "cross-left",
+          "task": "CROSS_LINE",
+          "target_id": "auto-line-left",
+          "earliest_start_us": 0,
+          "latest_start_us": 0,
+          "expected_duration_us": 2000000,
+          "corridor_radius_m": 0.2,
+          "fallback_segment_id": "",
+          "path": [
+            {"time_us": 0, "x": 1.0, "y": 4.5, "heading": 0.0},
+            {"time_us": 1000000, "x": 2.0, "y": 4.5, "heading": 0.0},
+            {"time_us": 2000000, "x": 3.0, "y": 4.5, "heading": 0.0}
+          ]
+        }
+      ]
+    },
+    {
+      "team_number": 1678,
+      "robot_label": "ally-right",
+      "start_pose": {"x": 1.0, "y": 6.0, "heading": 0.0},
+      "footprint": {"length_m": 0.9, "width_m": 0.9},
+      "max_velocity_mps": 2.0,
+      "max_acceleration_mps2": 4.0,
+      "initial_confidence": 0.75,
+      "segments": [
+        {
+          "segment_id": "cross-right",
+          "task": "CROSS_LINE",
+          "target_id": "auto-line-right",
+          "earliest_start_us": 0,
+          "latest_start_us": 0,
+          "expected_duration_us": 2000000,
+          "corridor_radius_m": 0.2,
+          "fallback_segment_id": "",
+          "path": [
+            {"time_us": 0, "x": 1.0, "y": 6.0, "heading": 0.0},
+            {"time_us": 1000000, "x": 2.0, "y": 6.0, "heading": 0.0},
+            {"time_us": 2000000, "x": 3.0, "y": 6.0, "heading": 0.0}
+          ]
+        }
+      ]
+    }
+  ]
+}

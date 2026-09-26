@@ -1,0 +1,9 @@
+alliance_playbook:
+  ros__parameters:
+    plan_path: ""
+    expected_sha256: ""
+    sample_period_us: 100000
+    publish_rate_hz: 10.0
+    corridor_tolerance_m: 0.20
+    deviation_scale_m: 0.75
+    missing_half_life_us: 1000000

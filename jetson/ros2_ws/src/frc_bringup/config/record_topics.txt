@@ -13,5 +13,8 @@
 /perception/observations
 /world/state
 /world/markers
+/alliance/plan
+/alliance/reservations
+/alliance/markers
 /planning/global_path
 /planning/local_path
