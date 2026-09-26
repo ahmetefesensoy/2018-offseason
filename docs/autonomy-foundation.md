@@ -1,9 +1,12 @@
 # ROS 2 Otonom Temeli — Kurulum ve Demo Rehberi
 
 Bu faz, Jetson Orin'in güvenilmeyen/yüksek seviye planlayıcı; roboRIO'nun ise tek
-motor otoritesi olduğu güvenli kontrol zincirini kurar. Kamera algılama, rakip
-takibi, Nav2 ve skor stratejisi sonraki fazlardır. Bu temel tamamlanmadan onların
+motor otoritesi olduğu güvenli kontrol zincirini kurar. Gerçek kamera inference,
+VSLAM, Nav2 ve skor stratejisi sonraki fazlardır. Bu temel tamamlanmadan onların
 hiçbiri gerçek robotu süremez.
+
+Perception ve takip çekirdeği artık `docs/perception-world-model.md` içindeki Faz
+2 demosuyla eklenmiştir. Gerçek kamera/YOLO/VSLAM adaptörleri henüz bağlı değildir.
 
 ## Şu anda çalışan zincir
 
@@ -110,7 +113,8 @@ ve açıkça arm edilmesi gereken yavaş bir figure-eight komut kaynağı başla
 ros2 launch frc_bringup foundation.launch.py \
   use_fake_roborio:=true \
   use_fake_autonomy:=true \
-  arm_fake_autonomy:=true
+  arm_fake_autonomy:=true \
+  use_synthetic_perception:=true
 ```
 
 RViz'de şunlar görünür:
