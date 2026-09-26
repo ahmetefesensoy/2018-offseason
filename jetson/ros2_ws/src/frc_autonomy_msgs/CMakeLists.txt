@@ -11,7 +11,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/AutonomyCommand.msg"
   "msg/AutonomyStatus.msg"
   "msg/AlliancePlan.msg"
+  "msg/CandidateTask.msg"
+  "msg/DecisionTrace.msg"
   "msg/GameObject.msg"
+  "msg/NavigationGoal.msg"
+  "msg/NavigationState.msg"
   "msg/PlanSegment.msg"
   "msg/PredictedPose.msg"
   "msg/ReservationSample.msg"
@@ -22,6 +26,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SemanticObservation.msg"
   "msg/SemanticObservationArray.msg"
   "msg/TimedPose.msg"
+  "msg/UtilityBreakdown.msg"
   "msg/WorldState.msg"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs
 )

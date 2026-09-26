@@ -1,0 +1,13 @@
+string task_id
+string task_type
+string target_id
+geometry_msgs/Pose2D target_pose
+int64 estimated_duration_us
+float64 success_probability
+float64 collision_probability
+float64 reservation_cost
+string required_capability
+bool hard_valid
+string rejection_reason
+string intake_action
+float64 elevator_target_m

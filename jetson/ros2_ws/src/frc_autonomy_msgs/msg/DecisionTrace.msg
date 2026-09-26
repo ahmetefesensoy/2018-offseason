@@ -1,0 +1,10 @@
+std_msgs/Header header
+uint64 world_version
+uint64 decision_sequence
+int64 seed
+string chosen_task_id
+CandidateTask[] candidates
+UtilityBreakdown[] utilities
+string replan_reason
+string counterfactual
+string decision_hash

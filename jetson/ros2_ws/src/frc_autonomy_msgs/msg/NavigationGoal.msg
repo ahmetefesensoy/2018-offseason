@@ -1,0 +1,10 @@
+std_msgs/Header header
+uint64 world_version
+string task_id
+geometry_msgs/Pose2D target_pose
+float64 position_tolerance_m
+float64 heading_tolerance_rad
+int64 valid_until_us
+uint8 intake_action
+bool mechanism_enabled
+float64 elevator_target_m

@@ -1,0 +1,12 @@
+string task_id
+float64 direct_score
+float64 ownership_score
+float64 ranking_point_value
+float64 future_value
+float64 time_penalty
+float64 collision_penalty
+float64 failure_penalty
+float64 overlap_penalty
+float64 rule_penalty
+float64 uncertainty_penalty
+float64 total
