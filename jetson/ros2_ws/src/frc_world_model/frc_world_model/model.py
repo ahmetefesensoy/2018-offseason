@@ -71,6 +71,7 @@ class Track:
 
 class MultiObjectTracker:
     def __init__(self, config: TrackerConfig) -> None:
+        self._validate_config(config)
         self._config = config
         self._tracks: dict[str, Track] = {}
         self._next_track_number = 1
@@ -109,8 +110,39 @@ class MultiObjectTracker:
     def snapshot(self, now_us: int) -> tuple[Track, ...]:
         self._expire_tracks(now_us)
         return tuple(
-            self._with_predictions(self._tracks[key]) for key in sorted(self._tracks)
+            self._with_predictions(self._extrapolate(self._tracks[key], now_us))
+            for key in sorted(self._tracks)
         )
+
+    @staticmethod
+    def _validate_config(config: TrackerConfig) -> None:
+        numeric_values = (
+            config.association_gate_m,
+            config.position_gain,
+            config.velocity_gain,
+            config.prediction_horizon_s,
+            config.prediction_step_s,
+            config.process_noise_variance,
+            config.min_confidence,
+        )
+        if not all(math.isfinite(value) for value in numeric_values):
+            raise ValueError("tracker configuration must be finite")
+        if config.association_gate_m <= 0.0:
+            raise ValueError("association gate must be positive")
+        if not 0.0 <= config.position_gain <= 1.0:
+            raise ValueError("position gain must be between zero and one")
+        if not 0.0 <= config.velocity_gain <= 1.0:
+            raise ValueError("velocity gain must be between zero and one")
+        if config.track_timeout_us <= 0 or config.max_observation_age_us <= 0:
+            raise ValueError("tracker timeouts must be positive")
+        if config.prediction_horizon_s <= 0.0 or config.prediction_step_s <= 0.0:
+            raise ValueError("prediction horizon and step must be positive")
+        if config.prediction_step_s > config.prediction_horizon_s:
+            raise ValueError("prediction step cannot exceed its horizon")
+        if config.process_noise_variance < 0.0:
+            raise ValueError("process noise variance cannot be negative")
+        if not 0.0 < config.min_confidence <= 1.0:
+            raise ValueError("minimum confidence must be within (0, 1]")
 
     def _create_track(self, item: Observation) -> str:
         track_id = f"trk-{self._next_track_number:06d}"
@@ -230,6 +262,19 @@ class MultiObjectTracker:
         )
         return replace(track, predictions=predictions)
 
+    def _extrapolate(self, track: Track, now_us: int) -> Track:
+        horizon_s = max((now_us - track.last_seen_us) / 1e6, 0.0)
+        if horizon_s == 0.0:
+            return track
+        covariance_growth = self._config.process_noise_variance * horizon_s**2
+        return replace(
+            track,
+            x=track.x + track.vx * horizon_s,
+            y=track.y + track.vy * horizon_s,
+            variance_x=track.variance_x + covariance_growth,
+            variance_y=track.variance_y + covariance_growth,
+        )
+
     def _prediction_at(self, track: Track, horizon_s: float) -> Prediction:
         covariance_growth = self._config.process_noise_variance * horizon_s**2
         return Prediction(
@@ -262,8 +307,8 @@ class MultiObjectTracker:
             raise ObservationError("observation footprint must be positive")
         if not self._config.min_confidence <= item.confidence <= 1.0:
             raise ObservationError("observation confidence is outside the accepted range")
-        if item.variance_x < 0.0 or item.variance_y < 0.0:
-            raise ObservationError("observation covariance cannot be negative")
+        if item.variance_x <= 0.0 or item.variance_y <= 0.0:
+            raise ObservationError("observation covariance must be positive")
         if item.timestamp_us <= 0 or item.timestamp_us > now_us:
             raise ObservationError("observation timestamp is invalid")
         if now_us - item.timestamp_us > self._config.max_observation_age_us:
