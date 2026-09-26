@@ -13,6 +13,7 @@ import frc.robot.autonomy.AutonomyCommandSource;
 import frc.robot.autonomy.AutonomyController;
 import frc.robot.autonomy.AutonomyDriveCommand;
 import frc.robot.autonomy.AutonomyLinkIONetworkTables;
+import frc.robot.autonomy.AutonomyMechanismCommand;
 import frc.robot.autonomy.AutonomyRobotState;
 import frc.robot.autonomy.AutonomySafetyGate;
 import frc.robot.subsystems.ClimbSubsystem;
@@ -39,7 +40,7 @@ public class RobotContainer {
     public RobotContainer() {
         drivetrain = SwerveDriveSubsystem.createReal();
         autonomyCommandSource = createRealAutonomyController(drivetrain);
-        autonomousCommand = new AutonomyDriveCommand(drivetrain, autonomyCommandSource);
+        autonomousCommand = createAutonomousCommand();
         configureDriveCommand();
         configureButtonBindings();
     }
@@ -53,7 +54,7 @@ public class RobotContainer {
             AutonomyCommandSource autonomyCommandSource) {
         this.drivetrain = Objects.requireNonNull(drivetrain);
         this.autonomyCommandSource = Objects.requireNonNull(autonomyCommandSource);
-        autonomousCommand = new AutonomyDriveCommand(drivetrain, autonomyCommandSource);
+        autonomousCommand = createAutonomousCommand();
         configureDriveCommand();
         configureButtonBindings();
     }
@@ -106,6 +107,12 @@ public class RobotContainer {
         }, drivetrain::stop, drivetrain));
     }
 
+    private Command createAutonomousCommand() {
+        return Commands.parallel(
+            new AutonomyDriveCommand(drivetrain, autonomyCommandSource),
+            new AutonomyMechanismCommand(elevator, intake, autonomyCommandSource));
+    }
+
     private void configureButtonBindings() {
         // whileTrue + startEnd: the mechanism runs only while the button is
         // held and stops the instant it's released. onTrue(RunCommand) would
@@ -144,6 +151,8 @@ public class RobotContainer {
     public void stopAutonomy() {
         autonomyCommandSource.cancel();
         drivetrain.stop();
+        intake.stop();
+        elevator.stop();
     }
 
     public void stopIntake() {

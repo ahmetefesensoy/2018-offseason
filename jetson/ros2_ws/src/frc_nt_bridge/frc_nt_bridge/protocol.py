@@ -18,6 +18,9 @@ class CommandRequest:
     vy_mps: float
     omega_radps: float
     valid_for_us: int
+    mechanism_enabled: bool = False
+    intake_action: int = 0
+    elevator_target_m: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -29,6 +32,9 @@ class CommandFrame:
     vx_mps: float
     vy_mps: float
     omega_radps: float
+    mechanism_enabled: bool
+    intake_action: int
+    elevator_target_m: float
     sequence: int
 
     def publish_operations(self) -> Tuple[Tuple[str, object], ...]:
@@ -41,6 +47,9 @@ class CommandFrame:
             ("vx_mps", self.vx_mps),
             ("vy_mps", self.vy_mps),
             ("omega_radps", self.omega_radps),
+            ("mechanism_enabled", self.mechanism_enabled),
+            ("intake_action", self.intake_action),
+            ("elevator_target_m", self.elevator_target_m),
             ("sequence", self.sequence),
             ("commit_sequence", self.sequence),
         )
@@ -52,10 +61,12 @@ class FrameBuilder:
         max_translation_speed_mps: float,
         max_rotation_speed_radps: float,
         max_validity_us: int,
+        max_elevator_target_m: float = 1.52,
     ) -> None:
         self._max_translation_speed_mps = max_translation_speed_mps
         self._max_rotation_speed_radps = max_rotation_speed_radps
         self._max_validity_us = max_validity_us
+        self._max_elevator_target_m = max_elevator_target_m
         self._sequence = 0
 
     def synchronize_accepted_sequence(self, accepted_sequence: int) -> None:
@@ -82,12 +93,23 @@ class FrameBuilder:
             raise ProtocolError("translation velocity exceeds the safety limit")
         if abs(request.omega_radps) > self._max_rotation_speed_radps:
             raise ProtocolError("rotation velocity exceeds the safety limit")
+        if request.intake_action not in {0, 1, 2, 3}:
+            raise ProtocolError("intake action is outside the safety contract")
+        if (
+            not math.isfinite(request.elevator_target_m)
+            or request.elevator_target_m < 0.0
+            or request.elevator_target_m > self._max_elevator_target_m
+        ):
+            raise ProtocolError("elevator target is outside the safety limit")
 
         self._sequence += 1
         if request.armed:
             vx_mps, vy_mps, omega_radps = velocity
         else:
             vx_mps, vy_mps, omega_radps = (0.0, 0.0, 0.0)
+        mechanism_enabled = request.mechanism_enabled if request.armed else False
+        intake_action = request.intake_action if mechanism_enabled else 0
+        elevator_target_m = request.elevator_target_m if mechanism_enabled else 0.0
 
         return CommandFrame(
             session_id=session_id,
@@ -97,6 +119,9 @@ class FrameBuilder:
             vx_mps=vx_mps,
             vy_mps=vy_mps,
             omega_radps=omega_radps,
+            mechanism_enabled=mechanism_enabled,
+            intake_action=intake_action,
+            elevator_target_m=elevator_target_m,
             sequence=self._sequence,
         )
 

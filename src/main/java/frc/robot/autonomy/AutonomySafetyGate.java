@@ -1,6 +1,7 @@
 package frc.robot.autonomy;
 
 import frc.robot.AutonomyConstants;
+import frc.robot.Constants;
 import java.util.Objects;
 
 /** Stateful, fail-closed validation boundary between the Jetson and motor control. */
@@ -65,6 +66,15 @@ public final class AutonomySafetyGate {
                 || Math.abs(frame.omegaRadiansPerSecond())
                     > AutonomyConstants.MAX_ROTATION_SPEED_RAD_PER_SEC) {
             return reject(AutonomyRejectReason.SPEED_LIMIT, frame);
+        }
+        if (frame.intakeAction() == null
+                || !Double.isFinite(frame.elevatorTargetMeters())
+                || frame.elevatorTargetMeters() < Constants.ELEVATOR_GROUND_METERS
+                || frame.elevatorTargetMeters() > Constants.ELEVATOR_SCALE_METERS
+                || (!frame.mechanismEnabled()
+                    && (frame.intakeAction() != AutonomyIntakeAction.STOP
+                        || frame.elevatorTargetMeters() != Constants.ELEVATOR_GROUND_METERS))) {
+            return reject(AutonomyRejectReason.INVALID_MECHANISM_COMMAND, frame);
         }
         if (!context.gyroHealthy()) {
             return reject(AutonomyRejectReason.GYRO_UNHEALTHY, frame);

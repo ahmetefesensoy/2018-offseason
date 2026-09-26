@@ -59,13 +59,39 @@ class FrameBuilderTest(unittest.TestCase):
 
     def test_disarmed_frame_forces_zero_velocity(self):
         frame = self.builder.build(
-            CommandRequest(False, 0.4, -0.3, 1.0, 100_000),
+            CommandRequest(False, 0.4, -0.3, 1.0, 100_000, True, 3, 0.55),
             session_id="boot-a",
             now_server_us=1_000_000,
         )
 
         self.assertFalse(frame.armed)
         self.assertEqual((0.0, 0.0, 0.0), (frame.vx_mps, frame.vy_mps, frame.omega_radps))
+        self.assertFalse(frame.mechanism_enabled)
+        self.assertEqual(0, frame.intake_action)
+        self.assertEqual(0.0, frame.elevator_target_m)
+
+    def test_mechanism_fields_are_validated_and_committed_atomically(self):
+        frame = self.builder.build(
+            CommandRequest(True, 0.1, 0.0, 0.0, 100_000, True, 3, 0.55),
+            session_id="boot-a",
+            now_server_us=1_000_000,
+        )
+
+        operations = frame.publish_operations()
+
+        self.assertEqual(3, dict(operations)["intake_action"])
+        self.assertTrue(dict(operations)["mechanism_enabled"])
+        self.assertEqual(0.55, dict(operations)["elevator_target_m"])
+        self.assertEqual("commit_sequence", operations[-1][0])
+
+        invalid_requests = (
+            CommandRequest(True, 0.0, 0.0, 0.0, 100_000, True, 4, 0.0),
+            CommandRequest(True, 0.0, 0.0, 0.0, 100_000, True, 1, math.nan),
+            CommandRequest(True, 0.0, 0.0, 0.0, 100_000, True, 1, 1.53),
+        )
+        for request in invalid_requests:
+            with self.subTest(request=request), self.assertRaises(ProtocolError):
+                self.builder.build(request, "boot-a", 1_000_000)
 
     def test_invalid_values_and_limits_fail_closed(self):
         invalid_requests = (

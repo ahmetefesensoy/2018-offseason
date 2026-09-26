@@ -55,6 +55,9 @@ class FrcNtBridge(Node):
             "vx_mps": self._nt.getDoubleTopic(self._path("command/vx_mps")).publish(),
             "vy_mps": self._nt.getDoubleTopic(self._path("command/vy_mps")).publish(),
             "omega_radps": self._nt.getDoubleTopic(self._path("command/omega_radps")).publish(),
+            "mechanism_enabled": self._nt.getBooleanTopic(self._path("command/mechanism_enabled")).publish(),
+            "intake_action": self._nt.getIntegerTopic(self._path("command/intake_action")).publish(),
+            "elevator_target_m": self._nt.getDoubleTopic(self._path("command/elevator_target_m")).publish(),
             "sequence": self._nt.getIntegerTopic(self._path("command/sequence")).publish(),
             "commit_sequence": self._nt.getIntegerTopic(self._path("command/commit_sequence")).publish(),
         }
@@ -86,6 +89,9 @@ class FrcNtBridge(Node):
             float(message.vy_mps),
             float(message.omega_radps),
             validity,
+            bool(message.mechanism_enabled),
+            int(message.intake_action),
+            float(message.elevator_target_m),
         )
         self._last_ros_command_monotonic_us = time.monotonic_ns() // 1_000
 

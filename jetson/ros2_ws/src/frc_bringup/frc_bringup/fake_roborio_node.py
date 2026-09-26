@@ -39,6 +39,9 @@ class FakeRoboRioNode(Node):
         self._vx = self._sub_double("command/vx_mps", 0.0)
         self._vy = self._sub_double("command/vy_mps", 0.0)
         self._omega = self._sub_double("command/omega_radps", 0.0)
+        self._mechanism_enabled = self._sub_boolean("command/mechanism_enabled", False)
+        self._intake_action = self._sub_integer("command/intake_action", 0)
+        self._elevator_target = self._sub_double("command/elevator_target_m", 0.0)
         self._sequence = self._sub_integer("command/sequence", 0)
         self._commit = self._sub_integer("command/commit_sequence", 0)
 
@@ -120,6 +123,10 @@ class FakeRoboRioNode(Node):
             self._reject("DISARMED")
         elif not all(math.isfinite(value) for value in velocity):
             self._reject("NON_FINITE_COMMAND")
+        elif self._intake_action.get() not in {0, 1, 2, 3}:
+            self._reject("INVALID_MECHANISM_COMMAND")
+        elif not math.isfinite(self._elevator_target.get()) or not 0.0 <= self._elevator_target.get() <= 1.52:
+            self._reject("INVALID_MECHANISM_COMMAND")
         elif math.hypot(velocity[0], velocity[1]) > 0.75 or abs(velocity[2]) > 1.5:
             self._reject("SPEED_LIMIT")
         elif now_us - sent_at > 100_000 or now_us > valid_until:

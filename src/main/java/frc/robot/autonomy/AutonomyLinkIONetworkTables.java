@@ -28,6 +28,9 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
     private final DoubleSubscriber vxSubscriber;
     private final DoubleSubscriber vySubscriber;
     private final DoubleSubscriber omegaSubscriber;
+    private final BooleanSubscriber mechanismEnabledSubscriber;
+    private final IntegerSubscriber intakeActionSubscriber;
+    private final DoubleSubscriber elevatorTargetSubscriber;
     private final IntegerSubscriber sequenceSubscriber;
     private final IntegerSubscriber commitSequenceSubscriber;
 
@@ -61,6 +64,12 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
         vySubscriber = instance.getDoubleTopic(path("command/vy_mps"))
             .subscribe(0.0, PERIODIC, KEEP_DUPLICATES);
         omegaSubscriber = instance.getDoubleTopic(path("command/omega_radps"))
+            .subscribe(0.0, PERIODIC, KEEP_DUPLICATES);
+        mechanismEnabledSubscriber = instance.getBooleanTopic(path("command/mechanism_enabled"))
+            .subscribe(false, PERIODIC, KEEP_DUPLICATES);
+        intakeActionSubscriber = instance.getIntegerTopic(path("command/intake_action"))
+            .subscribe(0L, PERIODIC, KEEP_DUPLICATES);
+        elevatorTargetSubscriber = instance.getDoubleTopic(path("command/elevator_target_m"))
             .subscribe(0.0, PERIODIC, KEEP_DUPLICATES);
         sequenceSubscriber = instance.getIntegerTopic(path("command/sequence"))
             .subscribe(0L, PERIODIC, KEEP_DUPLICATES);
@@ -102,7 +111,10 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
             vySubscriber.get(),
             omegaSubscriber.get(),
             sequence,
-            commitSequence));
+            commitSequence,
+            mechanismEnabledSubscriber.get(),
+            AutonomyIntakeAction.fromCode(intakeActionSubscriber.get()),
+            elevatorTargetSubscriber.get()));
     }
 
     @Override
@@ -142,6 +154,9 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
         vxSubscriber.close();
         vySubscriber.close();
         omegaSubscriber.close();
+        mechanismEnabledSubscriber.close();
+        intakeActionSubscriber.close();
+        elevatorTargetSubscriber.close();
         sequenceSubscriber.close();
         commitSequenceSubscriber.close();
 
