@@ -1,0 +1,17 @@
+world_model:
+  ros__parameters:
+    association_gate_m: 0.75
+    position_gain: 0.65
+    velocity_gain: 0.35
+    track_timeout_us: 750000
+    source_timeout_us: 250000
+    max_observation_age_us: 250000
+    min_confidence: 0.20
+    prediction_horizon_s: 2.0
+    prediction_step_s: 0.1
+    process_noise_variance: 0.16
+    publish_rate_hz: 10.0
+
+synthetic_perception:
+  ros__parameters:
+    publish_rate_hz: 20.0

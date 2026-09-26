@@ -10,5 +10,8 @@
 /camera/depth/image_rect_raw
 /perception/points
 /perception/obstacles
+/perception/observations
+/world/state
+/world/markers
 /planning/global_path
 /planning/local_path

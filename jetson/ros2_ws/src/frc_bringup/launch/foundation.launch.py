@@ -12,14 +12,21 @@ from launch_ros.parameter_descriptions import ParameterValue
 def generate_launch_description():
     bringup_share = get_package_share_directory("frc_bringup")
     description_share = get_package_share_directory("frc_robot_description")
+    world_model_share = get_package_share_directory("frc_world_model")
     xacro_file = os.path.join(description_share, "urdf", "frc_2018_robot.urdf.xacro")
     rviz_file = os.path.join(description_share, "rviz", "autonomy.rviz")
     config_file = os.path.join(bringup_share, "config", "autonomy.yaml")
+    world_model_config = os.path.join(
+        world_model_share,
+        "config",
+        "world_model.yaml",
+    )
 
     use_rviz = LaunchConfiguration("use_rviz")
     use_fake_roborio = LaunchConfiguration("use_fake_roborio")
     use_fake_autonomy = LaunchConfiguration("use_fake_autonomy")
     arm_fake_autonomy = LaunchConfiguration("arm_fake_autonomy")
+    use_synthetic_perception = LaunchConfiguration("use_synthetic_perception")
 
     robot_description = ParameterValue(Command(["xacro ", xacro_file]), value_type=str)
 
@@ -28,6 +35,7 @@ def generate_launch_description():
         DeclareLaunchArgument("use_fake_roborio", default_value="false"),
         DeclareLaunchArgument("use_fake_autonomy", default_value="false"),
         DeclareLaunchArgument("arm_fake_autonomy", default_value="false"),
+        DeclareLaunchArgument("use_synthetic_perception", default_value="false"),
         Node(
             package="robot_state_publisher",
             executable="robot_state_publisher",
@@ -49,6 +57,24 @@ def generate_launch_description():
         Node(
             package="frc_bringup",
             executable="status_visualizer",
+            output="screen",
+        ),
+        Node(
+            package="frc_world_model",
+            executable="world_model",
+            parameters=[world_model_config],
+            output="screen",
+        ),
+        Node(
+            package="frc_world_model",
+            executable="world_visualizer",
+            output="screen",
+        ),
+        Node(
+            package="frc_world_model",
+            executable="synthetic_perception",
+            condition=IfCondition(use_synthetic_perception),
+            parameters=[world_model_config],
             output="screen",
         ),
         Node(

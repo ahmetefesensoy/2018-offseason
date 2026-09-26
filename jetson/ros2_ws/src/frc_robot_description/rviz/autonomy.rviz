@@ -72,6 +72,11 @@ Visualization Manager:
       Name: Decisions and Obstacles
       Topic:
         Value: /autonomy/decision_markers
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Tracked Perception World
+      Topic:
+        Value: /world/markers
   Global Options:
     Background Color: 28; 30; 36
     Fixed Frame: map
