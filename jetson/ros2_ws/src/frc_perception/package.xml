@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>frc_perception</name>
+  <version>0.1.0</version>
+  <description>Validated Jetson detector runtime and RGB-depth projection.</description>
+  <maintainer email="robotics@example.com">FRC Autonomy Team</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>frc_autonomy_msgs</exec_depend>
+  <exec_depend>message_filters</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros_py</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

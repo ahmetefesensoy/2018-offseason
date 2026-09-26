@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "backend": "tensorrt",
+  "artifact_sha256": "REPLACE_WITH_64_CHARACTER_SHA256_OF_ENGINE",
+  "classes": ["power_cube", "robot", "switch_plate", "scale_plate", "vault_opening"],
+  "input_width": 640,
+  "input_height": 640,
+  "confidence_threshold": 0.45
+}

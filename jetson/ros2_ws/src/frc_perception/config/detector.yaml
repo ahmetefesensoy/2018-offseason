@@ -1,0 +1,10 @@
+detector_node:
+  ros__parameters:
+    model_path: /models/power_up.engine
+    metadata_path: /models/power_up.json
+    color_topic: /camera/color/image_raw
+    depth_topic: /camera/depth/image_raw
+    camera_info_topic: /camera/color/camera_info
+    depth_scale: 0.001
+    map_frame: map
+    sync_slop_s: 0.04
