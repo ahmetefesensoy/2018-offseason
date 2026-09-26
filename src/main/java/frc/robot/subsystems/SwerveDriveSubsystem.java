@@ -132,11 +132,7 @@ public final class SwerveDriveSubsystem extends SubsystemBase implements AutoClo
     }
 
     public boolean isDrivetrainHealthy() {
-        return Arrays.stream(getMeasuredModuleStates()).allMatch(state ->
-            state != null
-                && state.angle != null
-                && Double.isFinite(state.speedMetersPerSecond)
-                && Double.isFinite(state.angle.getRadians()));
+        return Arrays.stream(modules).allMatch(SwerveModule::isHealthy);
     }
 
     public Pose2d getPose() {

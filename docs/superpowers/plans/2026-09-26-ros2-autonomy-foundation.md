@@ -144,7 +144,6 @@ Frame limits for this first real-robot slice are intentionally conservative: 0.7
 - Create: `jetson/ros2_ws/src/frc_bringup/launch/foundation.launch.py`
 - Create: `jetson/ros2_ws/src/frc_bringup/config/autonomy.yaml`
 - Create: `jetson/ros2_ws/src/frc_bringup/config/record_topics.txt`
-- Create: `jetson/ros2_ws/src/frc_bringup/rviz/autonomy.rviz`
 - Create: `jetson/scripts/record_autonomy.sh`
 
 **Steps:**

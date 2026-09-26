@@ -1,0 +1,12 @@
+std_msgs/Header header
+string session_id
+string mode
+int64 accepted_sequence
+int64 roborio_time_us
+int64 command_age_us
+bool command_active
+bool gyro_healthy
+bool drivetrain_healthy
+string reject_reason
+geometry_msgs/Pose2D pose
+geometry_msgs/Twist measured_chassis

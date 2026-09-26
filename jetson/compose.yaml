@@ -1,0 +1,19 @@
+services:
+  autonomy-foundation:
+    build:
+      context: ..
+      dockerfile: jetson/Dockerfile
+    image: frc-autonomy-foundation:lyrical
+    network_mode: host
+    environment:
+      DISPLAY: ${DISPLAY}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-18}
+      QT_X11_NO_MITSHM: "1"
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./bags:/bags
+    command:
+      - ros2
+      - launch
+      - frc_bringup
+      - foundation.launch.py

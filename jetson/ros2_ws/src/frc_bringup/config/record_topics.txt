@@ -1,0 +1,14 @@
+/autonomy/command
+/autonomy/status
+/autonomy/odom
+/autonomy/executed_path
+/autonomy/decision_markers
+/tf
+/tf_static
+/diagnostics
+/camera/color/image_raw
+/camera/depth/image_rect_raw
+/perception/points
+/perception/obstacles
+/planning/global_path
+/planning/local_path

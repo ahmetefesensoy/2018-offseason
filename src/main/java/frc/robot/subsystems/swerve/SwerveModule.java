@@ -136,6 +136,15 @@ public final class SwerveModule implements AutoCloseable {
         return inputs.rawAbsolutePositionRotations();
     }
 
+    public boolean isHealthy() {
+        return io.isHealthy()
+            && Double.isFinite(inputs.drivePositionMeters())
+            && Double.isFinite(inputs.driveVelocityMetersPerSecond())
+            && inputs.turnAngle() != null
+            && Double.isFinite(inputs.turnAngle().getRadians())
+            && Double.isFinite(inputs.rawAbsolutePositionRotations());
+    }
+
     public void stop() {
         lastDesiredState = new SwerveModuleState(0.0, lastDesiredState.angle);
         io.stop();

@@ -149,6 +149,15 @@ class SwerveDriveSubsystemTest {
         }
     }
 
+    @Test
+    void drivetrainHealthIncludesEveryModuleHardwareFaultState() {
+        assertTrue(drive.isDrivetrainHealthy());
+
+        moduleIOs[2].healthy = false;
+
+        assertTrue(!drive.isDrivetrainHealthy());
+    }
+
     private static final class FakeGyroIO implements GyroIO {
         Rotation2d heading = Rotation2d.kZero;
         boolean connected = true;
@@ -180,6 +189,7 @@ class SwerveDriveSubsystemTest {
     private static final class FakeSwerveModuleIO implements SwerveModuleIO {
         Inputs inputs = new Inputs(0.0, 0.0, Rotation2d.kZero, 0.0);
         boolean stopCalled;
+        boolean healthy = true;
 
         @Override
         public Inputs readInputs() {
@@ -195,6 +205,11 @@ class SwerveDriveSubsystemTest {
         @Override
         public void stop() {
             stopCalled = true;
+        }
+
+        @Override
+        public boolean isHealthy() {
+            return healthy;
         }
     }
 }

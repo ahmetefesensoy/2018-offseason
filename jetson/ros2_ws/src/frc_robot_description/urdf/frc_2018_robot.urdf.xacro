@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="frc_2018_offseason">
+  <!-- CAD-derived envelope; remeasure swerve pivots on the physical robot before full-speed use. -->
+  <xacro:property name="bumper_size" value="0.89946"/>
+  <xacro:property name="frame_size" value="0.702"/>
+  <xacro:property name="base_height" value="0.17287"/>
+  <xacro:property name="module_spacing" value="0.52470"/>
+  <xacro:property name="wheel_radius" value="0.0508"/>
+  <xacro:property name="wheel_width" value="0.0381"/>
+
+  <material name="frc_green"><color rgba="0.05 0.55 0.12 1.0"/></material>
+  <material name="bumper_blue"><color rgba="0.02 0.12 0.75 1.0"/></material>
+  <material name="wheel_black"><color rgba="0.03 0.03 0.03 1.0"/></material>
+  <material name="mechanism_orange"><color rgba="0.95 0.45 0.05 1.0"/></material>
+
+  <link name="base_footprint"/>
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${base_height / 2.0}"/>
+      <geometry><box size="${frame_size} ${frame_size} ${base_height}"/></geometry>
+      <material name="frc_green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_height / 2.0}"/>
+      <geometry><box size="${bumper_size} ${bumper_size} ${base_height}"/></geometry>
+    </collision>
+  </link>
+  <joint name="base_footprint_to_base" type="fixed">
+    <parent link="base_footprint"/><child link="base_link"/>
+  </joint>
+
+  <xacro:macro name="bumper_rail" params="name x y sx sy">
+    <link name="${name}">
+      <visual>
+        <origin xyz="0 0 0.105"/>
+        <geometry><box size="${sx} ${sy} 0.127"/></geometry>
+        <material name="bumper_blue"/>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/><child link="${name}"/><origin xyz="${x} ${y} 0"/>
+    </joint>
+  </xacro:macro>
+  <xacro:bumper_rail name="front_bumper" x="${bumper_size / 2.0 - 0.04}" y="0" sx="0.08" sy="${bumper_size}"/>
+  <xacro:bumper_rail name="rear_bumper" x="${-bumper_size / 2.0 + 0.04}" y="0" sx="0.08" sy="${bumper_size}"/>
+  <xacro:bumper_rail name="left_bumper" x="0" y="${bumper_size / 2.0 - 0.04}" sx="${bumper_size - 0.16}" sy="0.08"/>
+  <xacro:bumper_rail name="right_bumper" x="0" y="${-bumper_size / 2.0 + 0.04}" sx="${bumper_size - 0.16}" sy="0.08"/>
+
+  <xacro:macro name="swerve_wheel" params="name x y">
+    <link name="${name}_wheel">
+      <visual>
+        <origin rpy="${pi / 2.0} 0 0"/>
+        <geometry><cylinder radius="${wheel_radius}" length="${wheel_width}"/></geometry>
+        <material name="wheel_black"/>
+      </visual>
+    </link>
+    <joint name="${name}_wheel_joint" type="fixed">
+      <parent link="base_link"/><child link="${name}_wheel"/>
+      <origin xyz="${x} ${y} ${wheel_radius}"/>
+    </joint>
+  </xacro:macro>
+  <xacro:swerve_wheel name="front_left" x="${module_spacing / 2.0}" y="${module_spacing / 2.0}"/>
+  <xacro:swerve_wheel name="front_right" x="${module_spacing / 2.0}" y="${-module_spacing / 2.0}"/>
+  <xacro:swerve_wheel name="back_left" x="${-module_spacing / 2.0}" y="${module_spacing / 2.0}"/>
+  <xacro:swerve_wheel name="back_right" x="${-module_spacing / 2.0}" y="${-module_spacing / 2.0}"/>
+
+  <!-- Stowed mechanism proxy only; detailed moving joints are added after encoder geometry calibration. -->
+  <link name="mechanism_proxy">
+    <visual>
+      <origin xyz="0 0 0.36"/>
+      <geometry><box size="0.12 0.50 0.55"/></geometry>
+      <material name="mechanism_orange"/>
+    </visual>
+  </link>
+  <joint name="mechanism_proxy_joint" type="fixed">
+    <parent link="base_link"/><child link="mechanism_proxy"/>
+  </joint>
+
+  <link name="camera_link"/>
+  <joint name="camera_mount" type="fixed">
+    <parent link="base_link"/><child link="camera_link"/>
+    <origin xyz="0.30 0 0.35"/>
+  </joint>
+  <link name="camera_optical_frame"/>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/><child link="camera_optical_frame"/>
+    <origin rpy="${-pi / 2.0} 0 ${-pi / 2.0}"/>
+  </joint>
+</robot>

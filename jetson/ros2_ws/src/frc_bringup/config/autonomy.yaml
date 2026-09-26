@@ -1,0 +1,16 @@
+frc_nt_bridge:
+  ros__parameters:
+    team_number: 0
+    server_address: "127.0.0.1"
+    command_timeout_us: 100000
+    default_validity_us: 100000
+    max_translation_speed_mps: 0.75
+    max_rotation_speed_radps: 1.5
+    max_validity_us: 150000
+
+fake_autonomy:
+  ros__parameters:
+    armed: false
+    forward_speed_mps: 0.18
+    lateral_speed_mps: 0.08
+    rotation_speed_radps: 0.25

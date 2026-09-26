@@ -1,6 +1,7 @@
 package frc.robot.subsystems.swerve;
 
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.REVLibError;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
@@ -20,6 +21,7 @@ public final class SwerveModuleIOSparkMax implements SwerveModuleIO {
     private final RelativeEncoder driveEncoder;
     private final SparkAbsoluteEncoder absoluteEncoder;
     private final double absoluteOffsetRadians;
+    private final boolean configured;
 
     public SwerveModuleIOSparkMax(ModuleConfig moduleConfig) {
         driveMotor = new SparkMax(moduleConfig.driveCanId(), MotorType.kBrushless);
@@ -50,14 +52,16 @@ public final class SwerveModuleIOSparkMax implements SwerveModuleIO {
         turnConfig.absoluteEncoder.velocityConversionFactor(
             SwerveConstants.TURN_VELOCITY_FACTOR_RAD_PER_SEC);
 
-        driveMotor.configure(
+        REVLibError driveConfigurationResult = driveMotor.configure(
             driveConfig,
             ResetMode.kResetSafeParameters,
             PersistMode.kPersistParameters);
-        turnMotor.configure(
+        REVLibError turnConfigurationResult = turnMotor.configure(
             turnConfig,
             ResetMode.kResetSafeParameters,
             PersistMode.kPersistParameters);
+        configured = driveConfigurationResult == REVLibError.kOk
+            && turnConfigurationResult == REVLibError.kOk;
     }
 
     @Override
@@ -86,6 +90,15 @@ public final class SwerveModuleIOSparkMax implements SwerveModuleIO {
     public void stop() {
         driveMotor.stopMotor();
         turnMotor.stopMotor();
+    }
+
+    @Override
+    public boolean isHealthy() {
+        return configured
+            && !driveMotor.hasActiveFault()
+            && !turnMotor.hasActiveFault()
+            && driveMotor.getLastError() == REVLibError.kOk
+            && turnMotor.getLastError() == REVLibError.kOk;
     }
 
     @Override

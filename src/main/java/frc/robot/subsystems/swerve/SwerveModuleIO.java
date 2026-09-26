@@ -18,6 +18,10 @@ public interface SwerveModuleIO extends AutoCloseable {
 
     void stop();
 
+    default boolean isHealthy() {
+        return true;
+    }
+
     @Override
     default void close() {}
 }

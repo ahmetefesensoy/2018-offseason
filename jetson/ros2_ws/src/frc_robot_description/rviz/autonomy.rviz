@@ -1,0 +1,98 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Selection
+    Name: Selection
+  - Class: rviz_common/Time
+    Name: Time
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.5
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Name: Field Grid
+      Plane: XY
+    - Class: rviz_default_plugins/RobotModel
+      Description Source: Topic
+      Description Topic:
+        Value: /robot_description
+      Enabled: true
+      Name: CAD-Derived Robot
+      Visual Enabled: true
+      Collision Enabled: false
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Name: TF
+      Show Axes: true
+      Show Names: true
+    - Class: rviz_default_plugins/Odometry
+      Enabled: true
+      Name: roboRIO Odometry
+      Topic:
+        Value: /autonomy/odom
+      Shape:
+        Value: Axes
+    - Class: rviz_default_plugins/Path
+      Color: 0; 255; 90
+      Enabled: true
+      Line Style: Lines
+      Line Width: 0.03
+      Name: Executed Path
+      Topic:
+        Value: /autonomy/executed_path
+    - Class: rviz_default_plugins/Path
+      Color: 255; 210; 0
+      Enabled: true
+      Line Style: Billboards
+      Line Width: 0.05
+      Name: Global Plan
+      Topic:
+        Value: /planning/global_path
+    - Class: rviz_default_plugins/Path
+      Color: 255; 80; 0
+      Enabled: true
+      Line Style: Billboards
+      Line Width: 0.05
+      Name: Local Plan
+      Topic:
+        Value: /planning/local_path
+    - Class: rviz_default_plugins/PointCloud2
+      Enabled: true
+      Name: Depth Points
+      Size (Pixels): 2
+      Style: Points
+      Topic:
+        Value: /perception/points
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Decisions and Obstacles
+      Topic:
+        Value: /autonomy/decision_markers
+  Global Options:
+    Background Color: 28; 30; 36
+    Fixed Frame: map
+    Frame Rate: 30
+  Name: FRC Dynamic Autonomy
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 6
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Pitch: 0.65
+      Yaw: 0.8
+Window Geometry:
+  Height: 900
+  Width: 1440

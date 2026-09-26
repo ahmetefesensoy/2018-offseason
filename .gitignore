@@ -4,6 +4,11 @@ build/
 bin/
 out/
 
+# Python test and bytecode caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
 # WPILib / VS Code
 .vscode/
 *.jar
