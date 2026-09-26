@@ -10,11 +10,18 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/AutonomyCommand.msg"
   "msg/AutonomyStatus.msg"
+  "msg/AlliancePlan.msg"
   "msg/GameObject.msg"
+  "msg/PlanSegment.msg"
   "msg/PredictedPose.msg"
+  "msg/ReservationSample.msg"
+  "msg/ReservationTube.msg"
+  "msg/ReservationTubeArray.msg"
   "msg/RobotTrack.msg"
+  "msg/RobotPlan.msg"
   "msg/SemanticObservation.msg"
   "msg/SemanticObservationArray.msg"
+  "msg/TimedPose.msg"
   "msg/WorldState.msg"
   DEPENDENCIES builtin_interfaces geometry_msgs std_msgs
 )

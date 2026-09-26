@@ -1,0 +1,8 @@
+int32 team_number
+string robot_label
+geometry_msgs/Pose2D start_pose
+geometry_msgs/Vector3 footprint
+float64 max_velocity_mps
+float64 max_acceleration_mps2
+float64 initial_confidence
+PlanSegment[] segments
