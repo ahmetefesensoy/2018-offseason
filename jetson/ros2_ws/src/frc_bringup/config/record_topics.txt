@@ -16,5 +16,7 @@
 /alliance/plan
 /alliance/reservations
 /alliance/markers
-/planning/global_path
-/planning/local_path
+/strategy/decision
+/strategy/navigation_goal
+/navigation/path
+/navigation/state

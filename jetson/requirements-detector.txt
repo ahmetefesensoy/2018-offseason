@@ -1,0 +1,3 @@
+# Install this inside the NVIDIA JetPack/Isaac ROS environment after its
+# CUDA-compatible PyTorch/TensorRT packages are present.
+ultralytics>=8.3,<9

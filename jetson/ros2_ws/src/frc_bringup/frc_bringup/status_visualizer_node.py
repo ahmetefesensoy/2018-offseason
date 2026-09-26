@@ -9,7 +9,7 @@ from rclpy.node import Node
 from tf2_ros import TransformBroadcaster
 from visualization_msgs.msg import Marker, MarkerArray
 
-from frc_autonomy_msgs.msg import AutonomyStatus
+from frc_autonomy_msgs.msg import AutonomyStatus, DecisionTrace, NavigationState
 
 
 class StatusVisualizerNode(Node):
@@ -20,7 +20,17 @@ class StatusVisualizerNode(Node):
         self._path_publisher = self.create_publisher(Path, "/autonomy/executed_path", 10)
         self._markers = self.create_publisher(MarkerArray, "/autonomy/decision_markers", 10)
         self._path = Path()
+        self._decision = None
+        self._navigation = None
         self.create_subscription(AutonomyStatus, "/autonomy/status", self._status_callback, 10)
+        self.create_subscription(DecisionTrace, "/strategy/decision", self._decision_callback, 10)
+        self.create_subscription(NavigationState, "/navigation/state", self._navigation_callback, 10)
+
+    def _decision_callback(self, message: DecisionTrace) -> None:
+        self._decision = message
+
+    def _navigation_callback(self, message: NavigationState) -> None:
+        self._navigation = message
 
     def _status_callback(self, status: AutonomyStatus) -> None:
         stamp = self.get_clock().now().to_msg()
@@ -74,7 +84,21 @@ class StatusVisualizerNode(Node):
             f"{status.mode} | seq={status.accepted_sequence} | "
             f"active={status.command_active} | {status.reject_reason}"
         )
-        self._markers.publish(MarkerArray(markers=[marker]))
+        markers = [marker]
+        if self._decision is not None:
+            decision = Marker()
+            decision.header.stamp = stamp; decision.header.frame_id = "base_link"
+            decision.ns = "strategy_decision"; decision.id = 1
+            decision.type = Marker.TEXT_VIEW_FACING; decision.action = Marker.ADD
+            decision.pose.position.z = 1.25; decision.pose.orientation.w = 1.0
+            decision.scale.z = 0.13; decision.color.a = 1.0; decision.color.b = 1.0; decision.color.g = 0.8
+            navigation_reason = self._navigation.obstacle_reason if self._navigation else "NO_NAV"
+            decision.text = (
+                f"TASK: {self._decision.chosen_task_id} | {self._decision.replan_reason}\n"
+                f"{self._decision.counterfactual}\nNAV: {navigation_reason}"
+            )
+            markers.append(decision)
+        self._markers.publish(MarkerArray(markers=markers))
 
 
 def odometry_to_pose_stamped(odometry):

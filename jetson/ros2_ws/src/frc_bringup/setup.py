@@ -26,6 +26,7 @@ setup(
         "console_scripts": [
             "fake_autonomy = frc_bringup.fake_autonomy_node:main",
             "fake_roborio = frc_bringup.fake_roborio_node:main",
+            "offline_autonomy_demo = frc_bringup.offline_demo:main",
             "status_visualizer = frc_bringup.status_visualizer_node:main",
         ]
     },

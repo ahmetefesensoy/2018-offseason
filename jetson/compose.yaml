@@ -16,4 +16,4 @@ services:
       - ros2
       - launch
       - frc_bringup
-      - foundation.launch.py
+      - dynamic_autonomy.launch.py

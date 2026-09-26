@@ -19,10 +19,17 @@ NT_ROOT = "/frc/autonomy/v1"
 class FakeRoboRioNode(Node):
     def __init__(self) -> None:
         super().__init__("fake_roborio")
+        self.declare_parameter("initial_x", 1.0)
+        self.declare_parameter("initial_y", 2.0)
+        self.declare_parameter("initial_yaw", 0.0)
         self._nt = ntcore.NetworkTableInstance.create()
         self._nt.startServer(persist_filename="", listen_address="127.0.0.1")
         self._session_id = f"sim-{uuid.uuid4()}"
-        self._pose = PoseState(0.0, 0.0, 0.0)
+        self._pose = PoseState(
+            float(self.get_parameter("initial_x").value),
+            float(self.get_parameter("initial_y").value),
+            float(self.get_parameter("initial_yaw").value),
+        )
         self._velocity = (0.0, 0.0, 0.0)
         self._active = False
         self._last_commit = -1

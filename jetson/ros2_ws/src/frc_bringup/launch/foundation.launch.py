@@ -4,7 +4,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.conditions import IfCondition
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command, LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -14,6 +14,9 @@ def generate_launch_description():
     description_share = get_package_share_directory("frc_robot_description")
     world_model_share = get_package_share_directory("frc_world_model")
     playbook_share = get_package_share_directory("frc_alliance_playbook")
+    strategy_share = get_package_share_directory("frc_strategy")
+    navigation_share = get_package_share_directory("frc_navigation")
+    perception_share = get_package_share_directory("frc_perception")
     xacro_file = os.path.join(description_share, "urdf", "frc_2018_robot.urdf.xacro")
     rviz_file = os.path.join(description_share, "rviz", "autonomy.rviz")
     config_file = os.path.join(bringup_share, "config", "autonomy.yaml")
@@ -23,6 +26,9 @@ def generate_launch_description():
         "world_model.yaml",
     )
     playbook_config = os.path.join(playbook_share, "config", "playbook.yaml")
+    strategy_config = os.path.join(strategy_share, "config", "power_up.yaml")
+    navigation_config = os.path.join(navigation_share, "config", "navigation.yaml")
+    detector_config = os.path.join(perception_share, "config", "detector.yaml")
     default_alliance_plan = os.path.join(
         playbook_share,
         "config",
@@ -37,6 +43,8 @@ def generate_launch_description():
     use_alliance_playbook = LaunchConfiguration("use_alliance_playbook")
     alliance_plan_path = LaunchConfiguration("alliance_plan_path")
     alliance_plan_sha256 = LaunchConfiguration("alliance_plan_sha256")
+    use_dynamic_autonomy = LaunchConfiguration("use_dynamic_autonomy")
+    use_detector = LaunchConfiguration("use_detector")
 
     robot_description = ParameterValue(Command(["xacro ", xacro_file]), value_type=str)
 
@@ -49,6 +57,8 @@ def generate_launch_description():
         DeclareLaunchArgument("use_alliance_playbook", default_value="true"),
         DeclareLaunchArgument("alliance_plan_path", default_value=default_alliance_plan),
         DeclareLaunchArgument("alliance_plan_sha256", default_value=""),
+        DeclareLaunchArgument("use_dynamic_autonomy", default_value="false"),
+        DeclareLaunchArgument("use_detector", default_value="false"),
         Node(
             package="robot_state_publisher",
             executable="robot_state_publisher",
@@ -105,18 +115,43 @@ def generate_launch_description():
         Node(
             package="frc_world_model",
             executable="synthetic_perception",
-            condition=IfCondition(use_synthetic_perception),
+            condition=IfCondition(PythonExpression([
+                "'", use_synthetic_perception, "' == 'true' and '", use_detector, "' != 'true'",
+            ])),
             parameters=[world_model_config],
             output="screen",
         ),
         Node(
             package="frc_bringup",
             executable="fake_autonomy",
-            condition=IfCondition(use_fake_autonomy),
+            condition=IfCondition(PythonExpression([
+                "'", use_fake_autonomy, "' == 'true' and '", use_dynamic_autonomy, "' != 'true'",
+            ])),
             parameters=[
                 config_file,
                 {"armed": ParameterValue(arm_fake_autonomy, value_type=bool)},
             ],
+            output="screen",
+        ),
+        Node(
+            package="frc_perception",
+            executable="detector_node",
+            condition=IfCondition(use_detector),
+            parameters=[detector_config],
+            output="screen",
+        ),
+        Node(
+            package="frc_strategy",
+            executable="strategy_node",
+            condition=IfCondition(use_dynamic_autonomy),
+            parameters=[strategy_config],
+            output="screen",
+        ),
+        Node(
+            package="frc_navigation",
+            executable="navigation_node",
+            condition=IfCondition(use_dynamic_autonomy),
+            parameters=[navigation_config],
             output="screen",
         ),
         Node(

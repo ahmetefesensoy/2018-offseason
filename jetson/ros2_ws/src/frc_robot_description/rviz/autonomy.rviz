@@ -49,9 +49,9 @@ Visualization Manager:
       Enabled: true
       Line Style: Billboards
       Line Width: 0.05
-      Name: Global Plan
+      Name: Dynamic Plan
       Topic:
-        Value: /planning/global_path
+        Value: /navigation/path
     - Class: rviz_default_plugins/Path
       Color: 255; 80; 0
       Enabled: true

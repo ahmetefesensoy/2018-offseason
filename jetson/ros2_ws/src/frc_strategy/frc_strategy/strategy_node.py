@@ -60,6 +60,7 @@ class StrategyNode(Node):
         self._has_cube = bool(self.get_parameter("initial_has_cube").value)
         self._completed: set[str] = set()
         self._last_goal_task = ""
+        self._navigation_emergency = False
         self._trace_publisher = self.create_publisher(DecisionTrace, "/strategy/decision", 10)
         self._goal_publisher = self.create_publisher(NavigationGoal, "/strategy/navigation_goal", 10)
         self.create_subscription(WorldState, "/world/state", self._on_world, 10)
@@ -102,6 +103,10 @@ class StrategyNode(Node):
             self._completed.clear()
 
     def _on_navigation(self, message) -> None:
+        self._navigation_emergency = (
+            message.state == NavigationState.STOPPED
+            and message.obstacle_reason == "DYNAMIC_COLLISION_STOP"
+        )
         if not message.goal_reached or not message.goal_task_id:
             return
         if message.goal_task_id == self._last_goal_task:
@@ -120,12 +125,11 @@ class StrategyNode(Node):
             task for task in self._generator.generate(snapshot)
             if task.task_id not in self._completed
         )
-        emergency = any(task.collision_probability >= 0.55 for task in candidates)
         decision = self._executive.decide(
             snapshot,
             candidates,
             int(self.get_parameter("seed").value),
-            emergency=emergency,
+            emergency=self._navigation_emergency,
         )
         if decision is None:
             return

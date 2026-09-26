@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-lyrical-robot-state-publisher \
       ros-lyrical-rosbag2 \
       ros-lyrical-rviz2 \
+      ros-lyrical-cv-bridge \
+      ros-lyrical-message-filters \
+      ros-lyrical-nav-msgs \
       ros-lyrical-tf2-ros \
       ros-lyrical-xacro \
     && rm -rf /var/lib/apt/lists/*
