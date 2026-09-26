@@ -1,0 +1,24 @@
+strategy_node:
+  ros__parameters:
+    seed: 2018
+    tick_rate_hz: 5.0
+    initial_has_cube: false
+    our_switch_side: LEFT
+    scale_side: LEFT
+    match_duration_s: 15.0
+    rollout_count: 64
+    hysteresis: 2.0
+    field_targets:
+      - "auto_line,CROSS_LINE,3.20,2.00,0.00,drive,5.0,2.0,0.0,HOLD"
+      - "switch_left,SCORE_SWITCH,3.65,2.75,0.00,switch,25.0,2.5,0.55,EJECT"
+      - "switch_right,SCORE_SWITCH,3.65,5.48,0.00,switch,25.0,2.5,0.55,EJECT"
+      - "scale_left,SCORE_SCALE,6.60,2.15,0.00,scale,35.0,3.5,1.55,EJECT"
+      - "scale_right,SCORE_SCALE,6.60,6.08,0.00,scale,35.0,3.5,1.55,EJECT"
+    weight_ranking_point: 1.0
+    weight_future: 0.6
+    weight_time: 0.8
+    weight_collision: 60.0
+    weight_failure: 12.0
+    weight_overlap: 25.0
+    weight_penalty: 30.0
+    weight_uncertainty: 8.0

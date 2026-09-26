@@ -1,0 +1,7 @@
+capabilities:
+  drive: true
+  intake: true
+  switch: true
+  scale: true
+  vault: false
+  climb: false
