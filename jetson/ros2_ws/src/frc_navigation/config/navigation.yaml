@@ -1,0 +1,19 @@
+navigation_node:
+  ros__parameters:
+    field_length_m: 16.46
+    field_width_m: 8.23
+    robot_radius_m: 0.55
+    max_speed_mps: 0.75
+    max_omega_radps: 1.5
+    planner_rate_hz: 5.0
+    controller_rate_hz: 30.0
+    world_timeout_us: 300000
+    goal_timeout_us: 500000
+    grid_resolution_m: 0.25
+    time_step_s: 0.20
+    stop_clearance_m: 0.20
+    slow_clearance_m: 0.80
+    static_rectangles:
+      - "3.95,3.45,4.35,4.78"
+      - "6.85,2.95,7.45,5.28"
+      - "12.11,3.45,12.51,4.78"
