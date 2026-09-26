@@ -1,0 +1,7 @@
+string object_id
+string class_name
+geometry_msgs/PoseWithCovariance pose
+geometry_msgs/TwistWithCovariance velocity
+geometry_msgs/Vector3 size
+float64 confidence
+int64 last_seen_us
