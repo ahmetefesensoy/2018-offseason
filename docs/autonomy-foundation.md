@@ -8,6 +8,10 @@ hiçbiri gerçek robotu süremez.
 Perception ve takip çekirdeği artık `docs/perception-world-model.md` içindeki Faz
 2 demosuyla eklenmiştir. Gerçek kamera/YOLO/VSLAM adaptörleri henüz bağlı değildir.
 
+Maç öncesi takım arkadaşı rotaları, zaman bağımlı rezervasyonlar, RViz çakışma
+görselleştirmesi ve yerel Strategy Studio artık `docs/alliance-playbook.md`
+içindeki Faz 3 akışıyla eklenmiştir. Bu katman henüz hareket komutu üretmez.
+
 ## Şu anda çalışan zincir
 
 ```text
@@ -124,6 +128,7 @@ RViz'de şunlar görünür:
 - roboRIO/sim pose odometrisi ve yürütülen iz;
 - aktif/pasif komut, sequence ve reject reason metni;
 - sonraki fazlar için global/local plan, point cloud ve karar marker katmanları.
+- takım arkadaşı rotaları, güvenlik koridorları, çakışma ve sapma marker'ları.
 
 `arm_fake_autonomy` yalnız simülasyonda `true` yapılmalıdır. Gerçek robot launch'ı:
 
