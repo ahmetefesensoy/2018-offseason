@@ -1,8 +1,6 @@
 Panels:
   - Class: rviz_common/Displays
     Name: Displays
-  - Class: rviz_common/Selection
-    Name: Selection
   - Class: rviz_common/Time
     Name: Time
 Visualization Manager:
@@ -24,18 +22,21 @@ Visualization Manager:
       Visual Enabled: true
       Collision Enabled: false
     - Class: rviz_default_plugins/TF
-      Enabled: true
+      Enabled: false
       Frame Timeout: 15
       Name: TF
       Show Axes: true
       Show Names: true
     - Class: rviz_default_plugins/Odometry
       Enabled: true
+      Keep: 1
       Name: roboRIO Odometry
       Topic:
         Value: /autonomy/odom
       Shape:
         Value: Axes
+        Axes Length: 0.35
+        Axes Radius: 0.025
     - Class: rviz_default_plugins/Path
       Color: 0; 255; 90
       Enabled: true
@@ -96,12 +97,12 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 6
+      Distance: 18
       Focal Point:
-        X: 0
-        Y: 0
+        X: 7.0
+        Y: 4.1
         Z: 0
-      Pitch: 0.65
+      Pitch: 1.05
       Yaw: 0.8
 Window Geometry:
   Height: 900

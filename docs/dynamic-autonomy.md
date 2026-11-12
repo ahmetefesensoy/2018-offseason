@@ -7,12 +7,10 @@ Motor yetkisi her zaman roboRIO'dadır; Jetson yalnız süreli ve sınırlandır
 
 ## En hızlı doğrulama
 
-ROS kurulumu olmadan karar, rota, detour ve acil durdurma çekirdeğini çalıştır:
+ROS kurulumu olmadan depo kökünden karar, rota, detour ve acil durdurma çekirdeğini çalıştır:
 
 ```bash
-cd jetson/ros2_ws
-source install/setup.bash
-ros2 run frc_bringup offline_autonomy_demo
+python tools/run_offline.py
 ```
 
 Başarılı çıktı `pickup:cube-demo`, `detour: true`, `emergency_stop: true` ve
@@ -42,6 +40,10 @@ docker compose -f jetson/compose.yaml up
 ```
 
 ## Gerçek Jetson modeli
+
+Güncel varsayılan HSV küp tespitidir ve ağırlık dosyası istemez. Aşağıdaki
+adımlar yalnız `detector.yaml` içinde `backend: yolo` seçildiğinde uygulanır.
+Gerçek kamera ve sürüm hedefleri için `docs/hardware.md` dosyasını okuyun.
 
 1. ONNX veya TensorRT engine dosyasını Jetson'da `/models/power_up.engine` olarak
    yerleştir.

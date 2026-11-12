@@ -9,6 +9,7 @@ import rclpy
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 
 from frc_autonomy_msgs.msg import (
     AutonomyCommand,
@@ -68,7 +69,7 @@ class NavigationNode(Node):
             "controller_rate_hz": 30.0, "world_timeout_us": 300_000,
             "goal_timeout_us": 500_000, "grid_resolution_m": 0.25, "time_step_s": 0.20,
             "stop_clearance_m": 0.20, "slow_clearance_m": 0.80,
-            "static_rectangles": [],
+            "static_rectangles": Parameter.Type.STRING_ARRAY,
         }
         for name, value in defaults.items(): self.declare_parameter(name, value)
 
@@ -156,7 +157,9 @@ class NavigationNode(Node):
             float(self.get_parameter("field_length_m").value),
             float(self.get_parameter("field_width_m").value),
             float(self.get_parameter("robot_radius_m").value),
-            _rectangles(self.get_parameter("static_rectangles").value), obstacles,
+            _rectangles(self.get_parameter_or(
+                "static_rectangles", Parameter("static_rectangles", Parameter.Type.STRING_ARRAY, [])
+            ).value), obstacles,
             _reservations(self._reservations, self._match_start_us),
         )
 

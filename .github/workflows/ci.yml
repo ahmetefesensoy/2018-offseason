@@ -1,0 +1,24 @@
+name: Robot and autonomy
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  robot:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: .\gradlew.bat test build --console=plain
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install pytest numpy opencv-python-headless ruff
+      - run: python tools/test_core.py
+      - run: ruff check --select E9,F63,F7,F82 jetson/ros2_ws/src tools

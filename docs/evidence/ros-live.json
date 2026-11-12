@@ -1,0 +1,22 @@
+{
+  "status_messages": 966,
+  "navigation_messages": 585,
+  "active_messages": 698,
+  "distance_travelled_m": 7.6163,
+  "planned_path_messages": 448,
+  "rejection_reasons": [
+    "DISARMED",
+    "NONE",
+    "NO_FRAME",
+    "NO_LINK"
+  ],
+  "navigation_reasons": [
+    "CLEAR",
+    "DYNAMIC_COLLISION_SLOW",
+    "DYNAMIC_COLLISION_STOP",
+    "GOAL_REACHED",
+    "INPUT_STALE",
+    "NO_INPUT",
+    "NO_SAFE_PATH"
+  ]
+}

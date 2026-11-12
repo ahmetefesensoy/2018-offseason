@@ -68,6 +68,15 @@ class NavigationCoreTest(unittest.TestCase):
         self.assertEqual((result.command.vx_mps, result.command.vy_mps), (0.0, 0.0))
         self.assertEqual(result.reason, "DYNAMIC_COLLISION_STOP")
 
+    def test_rotated_commands_stay_below_strict_network_speed_limit(self):
+        controller = HolonomicController()
+        for angle_step in range(720):
+            heading = angle_step * math.pi / 360.0
+            for x, y in ((8.0, 3.0), (2.0, 9.0), (-5.0, 4.0)):
+                path = (PathPoint(0, x, y, heading),)
+                command = controller.command(Pose2(0.0, 0.0, heading), path, True)
+                self.assertLessEqual(math.hypot(command.vx_mps, command.vy_mps), 0.75)
+
     def test_stale_perception_never_increases_speed(self):
         monitor = CollisionMonitor(stop_clearance_m=0.20, slow_clearance_m=0.80, horizon_s=1.0)
         command = VelocityCommand(True, 0.75, 0.0, 0.0, 0, False, 0.0)

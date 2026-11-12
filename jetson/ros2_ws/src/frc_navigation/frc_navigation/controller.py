@@ -45,6 +45,13 @@ class HolonomicController:
         sine = math.sin(pose.heading)
         robot_vx = cosine * field_vx + sine * field_vy
         robot_vy = -sine * field_vx + cosine * field_vy
+        # Rotation can round a vector just above the strict NT/roboRIO limit.
+        # Keep a tiny margin here; the receiver's rejection limit stays strict.
+        robot_speed = math.hypot(robot_vx, robot_vy)
+        safe_limit = limit * (1.0 - 1e-12)
+        if robot_speed > safe_limit and robot_speed > 0.0:
+            robot_vx *= safe_limit / robot_speed
+            robot_vy *= safe_limit / robot_speed
         omega = _clamp(self._heading_gain * _wrap(target.heading - pose.heading), self._max_omega)
         return VelocityCommand(True, robot_vx, robot_vy, omega, 0, False, 0.0)
 

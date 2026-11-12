@@ -8,6 +8,17 @@ out/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.venv/
+*.egg-info/
+jetson/ros2_ws/build/
+jetson/ros2_ws/install/
+jetson/ros2_ws/log/
+jetson/bags/
+*.engine
+*.onnx
+.env
+.env.*
+!.env.example
 
 # WPILib / VS Code
 .vscode/

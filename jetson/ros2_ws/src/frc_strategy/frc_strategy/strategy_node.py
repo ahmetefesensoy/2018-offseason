@@ -6,6 +6,7 @@ import math
 
 import rclpy
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 
 from frc_autonomy_msgs.msg import (
     AutonomyStatus,
@@ -37,7 +38,10 @@ class StrategyNode(Node):
     def __init__(self) -> None:
         super().__init__("strategy_node")
         self._declare_parameters()
-        self._generator = TaskGenerator(_field_targets(self.get_parameter("field_targets").value))
+        targets = self.get_parameter_or(
+            "field_targets", Parameter("field_targets", Parameter.Type.STRING_ARRAY, [])
+        ).value
+        self._generator = TaskGenerator(_field_targets(targets))
         weights = StrategyWeights(
             ranking_point=float(self.get_parameter("weight_ranking_point").value),
             future=float(self.get_parameter("weight_future").value),
@@ -78,7 +82,7 @@ class StrategyNode(Node):
         self.declare_parameter("match_duration_s", 15.0)
         self.declare_parameter("rollout_count", 64)
         self.declare_parameter("hysteresis", 2.0)
-        self.declare_parameter("field_targets", [])
+        self.declare_parameter("field_targets", Parameter.Type.STRING_ARRAY)
         self.declare_parameter("capabilities", ["drive", "intake", "switch", "scale"])
         for name, default in (
             ("ranking_point", 1.0), ("future", 0.6), ("time", 0.8),
