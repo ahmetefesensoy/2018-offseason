@@ -1,0 +1,18 @@
+[Unit]
+Description=Personal FRC POWER UP autonomy coprocessor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=frcrobot
+EnvironmentFile=-/etc/frc-autonomy.env
+ExecStart=/bin/bash /opt/frc-autonomy/repo/tools/run_jetson.sh
+Restart=on-failure
+RestartSec=3
+KillSignal=SIGINT
+TimeoutStopSec=15
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

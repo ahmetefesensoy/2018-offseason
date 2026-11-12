@@ -26,7 +26,7 @@ class AutonomyLinkIONetworkTablesTest {
     void setup() {
         nt = NetworkTableInstance.create();
         nt.startLocal();
-        link = new AutonomyLinkIONetworkTables(nt);
+        link = new AutonomyLinkIONetworkTables(nt, () -> "LRL");
     }
 
     @AfterEach
@@ -74,6 +74,7 @@ class AutonomyLinkIONetworkTablesTest {
     void publishesCompleteStatusSnapshot() {
         var session = nt.getStringTopic(path("status/session_id")).subscribe("");
         var mode = nt.getStringTopic(path("status/mode")).subscribe("");
+        var gameData = nt.getStringTopic(path("status/game_specific_message")).subscribe("");
         var rejectReason = nt.getStringTopic(path("status/reject_reason")).subscribe("");
         var acceptedSequence = nt.getIntegerTopic(path("status/accepted_sequence")).subscribe(-1);
         var robotTime = nt.getIntegerTopic(path("status/roborio_time_us")).subscribe(-1);
@@ -101,6 +102,7 @@ class AutonomyLinkIONetworkTablesTest {
 
             assertEquals("boot-xyz", session.get());
             assertEquals("AUTONOMOUS", mode.get());
+            assertEquals("LRL", gameData.get());
             assertEquals("NONE", rejectReason.get());
             assertEquals(42L, acceptedSequence.get());
             assertEquals(5_000_000L, robotTime.get());
@@ -113,6 +115,7 @@ class AutonomyLinkIONetworkTablesTest {
         } finally {
             session.close();
             mode.close();
+            gameData.close();
             rejectReason.close();
             acceptedSequence.close();
             robotTime.close();

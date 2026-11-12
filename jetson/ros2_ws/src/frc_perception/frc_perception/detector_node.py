@@ -10,6 +10,7 @@ from message_filters import ApproximateTimeSynchronizer, Subscriber
 import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo, Image
 from tf2_ros import Buffer, TransformListener, TransformException
@@ -18,6 +19,7 @@ from frc_autonomy_msgs.msg import SemanticObservation, SemanticObservationArray
 
 from .model_contract import load_model_contract
 from .projection import BoundingBox, project_detection
+from .hsv_detector import HsvCubeDetector, depth_scale_for_encoding
 
 
 class DetectorRuntime:
@@ -43,20 +45,28 @@ class DetectorNode(Node):
     def __init__(self) -> None:
         super().__init__("detector_node")
         for name, default in (
+            ("backend", "hsv"), ("hsv_min_area_px", 200.0),
             ("model_path", "/models/power_up.engine"), ("metadata_path", "/models/power_up.json"),
             ("color_topic", "/camera/color/image_raw"), ("depth_topic", "/camera/depth/image_raw"),
             ("camera_info_topic", "/camera/color/camera_info"), ("depth_scale", 0.001),
             ("map_frame", "map"), ("sync_slop_s", 0.04),
         ): self.declare_parameter(name, default)
-        artifact = Path(str(self.get_parameter("model_path").value))
-        contract = load_model_contract(str(self.get_parameter("metadata_path").value), artifact)
-        self._classes = contract.classes
-        self._runtime = DetectorRuntime(str(artifact), contract.confidence_threshold)
+        backend = str(self.get_parameter("backend").value)
+        if backend == "hsv":
+            self._classes = ("power_cube",)
+            self._runtime = HsvCubeDetector(float(self.get_parameter("hsv_min_area_px").value))
+        elif backend == "yolo":
+            artifact = Path(str(self.get_parameter("model_path").value))
+            contract = load_model_contract(str(self.get_parameter("metadata_path").value), artifact)
+            self._classes = contract.classes
+            self._runtime = DetectorRuntime(str(artifact), contract.confidence_threshold)
+        else:
+            raise ValueError(f"Unsupported detector backend: {backend}")
         self._bridge = CvBridge(); self._tf = Buffer(); self._listener = TransformListener(self._tf, self)
         self._publisher = self.create_publisher(SemanticObservationArray, "/perception/observations", 10)
-        color = Subscriber(self, Image, str(self.get_parameter("color_topic").value))
-        depth = Subscriber(self, Image, str(self.get_parameter("depth_topic").value))
-        info = Subscriber(self, CameraInfo, str(self.get_parameter("camera_info_topic").value))
+        color = Subscriber(self, Image, str(self.get_parameter("color_topic").value), qos_profile=qos_profile_sensor_data)
+        depth = Subscriber(self, Image, str(self.get_parameter("depth_topic").value), qos_profile=qos_profile_sensor_data)
+        info = Subscriber(self, CameraInfo, str(self.get_parameter("camera_info_topic").value), qos_profile=qos_profile_sensor_data)
         self._sync = ApproximateTimeSynchronizer((color, depth, info), 8, float(self.get_parameter("sync_slop_s").value))
         self._sync.registerCallback(self._on_frame); self._sequence = 0
 
@@ -70,6 +80,12 @@ class DetectorNode(Node):
             self.get_logger().warning(f"Detector frame skipped: {error}"); return
         color = self._bridge.imgmsg_to_cv2(color_message, "bgr8")
         depth = self._bridge.imgmsg_to_cv2(depth_message, "passthrough")
+        try:
+            depth_scale = depth_scale_for_encoding(
+                depth_message.encoding, float(self.get_parameter("depth_scale").value)
+            )
+        except ValueError as error:
+            self.get_logger().warning(f"Detector frame skipped: {error}"); return
         observations = []
         for box, class_id, confidence in self._runtime.infer(color):
             if not 0 <= class_id < len(self._classes): continue
@@ -77,7 +93,7 @@ class DetectorNode(Node):
                 point = project_detection(
                     BoundingBox(*(round(value) for value in box)), depth,
                     fx=camera_info.k[0], fy=camera_info.k[4], cx=camera_info.k[2], cy=camera_info.k[5],
-                    depth_scale=float(self.get_parameter("depth_scale").value),
+                    depth_scale=depth_scale,
                 )
             except ValueError:
                 continue
