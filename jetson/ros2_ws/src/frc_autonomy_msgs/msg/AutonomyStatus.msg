@@ -1,6 +1,7 @@
 std_msgs/Header header
 string session_id
 string mode
+string game_specific_message
 int64 accepted_sequence
 int64 roborio_time_us
 int64 command_age_us

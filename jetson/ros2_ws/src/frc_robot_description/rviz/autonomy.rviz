@@ -106,4 +106,5 @@ Visualization Manager:
       Yaw: 0.8
 Window Geometry:
   Height: 900
+  Hide Left Dock: true
   Width: 1440

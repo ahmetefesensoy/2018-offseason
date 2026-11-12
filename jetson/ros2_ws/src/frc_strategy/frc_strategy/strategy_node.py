@@ -32,6 +32,7 @@ from .model import (
     WorldObject,
 )
 from .task_generator import TaskGenerator
+from .game_data import resolve_field_sides
 
 
 class StrategyNode(Node):
@@ -79,6 +80,7 @@ class StrategyNode(Node):
         self.declare_parameter("initial_has_cube", False)
         self.declare_parameter("our_switch_side", "LEFT")
         self.declare_parameter("scale_side", "LEFT")
+        self.declare_parameter("field_side_source", "fms")
         self.declare_parameter("match_duration_s", 15.0)
         self.declare_parameter("rollout_count", 64)
         self.declare_parameter("hysteresis", 2.0)
@@ -163,6 +165,12 @@ class StrategyNode(Node):
             for item in self._world.robots
         )
         reservations = _reservation_zones(self._reservations, self._match_start_us)
+        switch_side, scale_side = resolve_field_sides(
+            self._status.game_specific_message,
+            str(self.get_parameter("field_side_source").value),
+            str(self.get_parameter("our_switch_side").value).upper(),
+            str(self.get_parameter("scale_side").value).upper(),
+        )
         return StrategySnapshot(
             world_version=int(self._world.version), now_us=now_us,
             match_time_remaining_s=remaining_s, autonomous=True,
@@ -170,8 +178,8 @@ class StrategyNode(Node):
             has_cube=self._has_cube, game_objects=objects, robots=robots,
             reservations=reservations,
             capabilities=frozenset(self.get_parameter("capabilities").value),
-            our_switch_side=str(self.get_parameter("our_switch_side").value).upper(),
-            scale_side=str(self.get_parameter("scale_side").value).upper(),
+            our_switch_side=switch_side,
+            scale_side=scale_side,
             uncertainty=min(1.0, max(0.0, self._world.newest_source_age_us / 500_000.0)),
         )
 

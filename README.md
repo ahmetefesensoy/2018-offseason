@@ -45,7 +45,7 @@ flowchart LR
 
 Mevcut kaynak WPILib **2025.1.1**, Java **17** ve NT4 kullanır. Kullanıcının seçimi, 2018 POWER UP oyununu koruyup mevcut 2025 koduyla devam etmektir. / The chosen target preserves the 2018 game and the existing WPILib 2025 implementation. The season name does not imply WPILib 2018 compatibility.
 
-`getGameSpecificMessage()` mevcut kaynakta yoktur; switch/scale tarafları `frc_strategy/config/power_up.yaml` parametreleridir. Canlı FMS entegrasyonu uygulanmış gibi değerlendirilmemelidir. / Field sides currently come from configuration, not live FMS data.
+`DriverStation.getGameSpecificMessage()` → NT4 status → ROS `AutonomyStatus` → strateji zinciri, üç harfli 2018 L/R verisini işler. Varsayılan `field_side_source: fms` modunda boş/geçersiz veri switch/scale skor hedeflerini kapatır; güvenli çizgi geçişi/bekleme seçenekleri kalır. / The three-character POWER UP layout is forwarded from Driver Station through NT4 into strategy. Missing or invalid data suppresses scoring targets. Explicit `field_side_source: parameters` selects manual bench layout. The fake roboRIO publishes `LLL`; physical FMS operation has not been tested.
 
 ## Derleme ve test / Build and test
 
@@ -65,7 +65,7 @@ Varsayılan gerçek kamera adaptörü eğitim gerektirmeyen HSV sarı küp tespi
 
 ## Sonuçlar ve sonraki adımlar / Results and next steps
 
-72 Python core tests, ROS node startup regression, deterministic offline demo and the Windows Gradle build passed locally. A live ROS run observed 966 status messages, 698 active-command messages and 7.6163 m of simulated travel. These values describe a synthetic model, not a real robot. Planned next work: resolve the 2018 API target, calibrate a real camera/robot, integrate live FMS data, collect labeled cube images and evaluate a trained detector.
+76 Python core tests, ROS node startup regression, deterministic offline demo and 66 Java tests passed locally. Live ROS movement and simulated game-data forwarding are recorded in the evidence file above. These values describe a synthetic model, not a real robot. Planned next work: calibrate a real camera/robot, verify physical Driver Station/FMS integration, collect labeled cube images and evaluate a trained detector.
 
 ## Lisans / License
 

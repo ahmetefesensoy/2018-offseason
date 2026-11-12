@@ -29,3 +29,18 @@ The detector subscribes to:
 Varsayılan `backend: hsv` ağırlık dosyası istemez. Işık değişimi ve sarı başka nesneler yanlış tespit üretebilir; gerçek görüntülerde doğruluk ölçülmedi. `backend: yolo` seçimi için metadata sözleşmesine uyan, lisansı uygun bir model eğitilmeli ve Jetson üzerinde TensorRT çıktısı sınanmalıdır. Başka bir veri setinin veya modelin lisansı varsayılmadı.
 
 For a real launch, set matching team numbers, calibrate offsets and camera TF, then use `use_fake_roborio:=false use_synthetic_perception:=false use_detector:=true`. The current bridge is NT4 for the preserved 2025 robot code; it does not provide a tested WPILib 2018/NT3 connection.
+
+## Boot service / Açılış servisi
+
+`jetson/systemd/frc-autonomy.service` is a target-side template, not an installed service on this PC. It expects a dedicated `frcrobot` user, source at `/opt/frc-autonomy/repo`, and a built workspace/venv at `/opt/frc-autonomy/ws`. Create/configure those paths on the Jetson, install the camera driver, verify a manual foreground launch, then install the unit:
+
+```bash
+sudo install -m 644 jetson/systemd/frc-autonomy.service /etc/systemd/system/frc-autonomy.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now frc-autonomy
+journalctl -u frc-autonomy -f
+```
+
+`/etc/frc-autonomy.env` may set `FRC_AUTONOMY_WS`, `FRC_ROS_DISTRO` and `ROS_DOMAIN_ID`. Robot/team configuration and camera calibration must be completed before enabling this service. The service has not been executed on a Jetson during this review.
+
+Bu servis yalnız hedef Jetson içindir; WSL veya bu bilgisayara kurulmadı. İlk elle kamera/robot doğrulaması yapılmadan açılışa eklenmemelidir. Yapılandırma dosyaları robot örneğinden gerçek takım ve ölçülen sensör değerlerine uyarlanmalıdır.

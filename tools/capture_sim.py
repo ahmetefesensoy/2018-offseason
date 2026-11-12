@@ -32,6 +32,7 @@ result = {"status_messages": len(statuses), "navigation_messages": len(navigatio
           "distance_travelled_m": round(distance, 4),
           "planned_path_messages": sum(bool(s.planned_path) for s in navigation),
           "rejection_reasons": sorted({s.reject_reason for s in statuses}),
+          "game_specific_messages": sorted({s.game_specific_message for s in statuses}),
           "navigation_reasons": sorted({s.obstacle_reason for s in navigation})}
 args.out.parent.mkdir(parents=True, exist_ok=True)
 args.out.write_text(json.dumps(result, indent=2) + "\n")

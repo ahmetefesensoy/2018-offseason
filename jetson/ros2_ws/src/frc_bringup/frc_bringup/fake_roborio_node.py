@@ -22,6 +22,7 @@ class FakeRoboRioNode(Node):
         self.declare_parameter("initial_x", 1.0)
         self.declare_parameter("initial_y", 2.0)
         self.declare_parameter("initial_yaw", 0.0)
+        self.declare_parameter("game_specific_message", "LLL")
         self._nt = ntcore.NetworkTableInstance.create()
         self._nt.startServer(persist_filename="", listen_address="127.0.0.1")
         self._session_id = f"sim-{uuid.uuid4()}"
@@ -54,6 +55,7 @@ class FakeRoboRioNode(Node):
 
         self._status_session = self._pub_string("status/session_id")
         self._status_mode = self._pub_string("status/mode")
+        self._status_game_data = self._pub_string("status/game_specific_message")
         self._status_reject = self._pub_string("status/reject_reason")
         self._status_accepted = self._pub_integer("status/accepted_sequence")
         self._status_time = self._pub_integer("status/roborio_time_us")
@@ -155,6 +157,7 @@ class FakeRoboRioNode(Node):
         command_age = now_us - self._sent_at.get() if self._sent_at.get() > 0 else -1
         self._status_session.set(self._session_id)
         self._status_mode.set("AUTONOMOUS_SIM")
+        self._status_game_data.set(str(self.get_parameter("game_specific_message").value))
         self._status_reject.set(self._reject_reason)
         self._status_accepted.set(self._accepted_sequence)
         self._status_time.set(now_us)

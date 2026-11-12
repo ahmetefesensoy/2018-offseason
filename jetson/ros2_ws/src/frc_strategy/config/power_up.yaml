@@ -3,6 +3,7 @@ strategy_node:
     seed: 2018
     tick_rate_hz: 5.0
     initial_has_cube: false
+    field_side_source: fms
     our_switch_side: LEFT
     scale_side: LEFT
     match_duration_s: 15.0

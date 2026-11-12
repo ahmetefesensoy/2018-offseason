@@ -6,17 +6,19 @@ The working tree began at `0e756be` on `feature/ros2-autonomy-foundation`. The r
 |---|---|
 | Language/API | Java, WPILib/GradleRIO 2025.1.1, Java 17, NT4 |
 | Historical WPILib 2018 source | Not found in available Git refs |
-| FMS `getGameSpecificMessage()` | Not present in current source |
-| Field-side selection | ROS configuration parameters |
+| FMS `getGameSpecificMessage()` | Added to NT4 status; consumed through ROS |
+| Field-side selection | Validated 2018 L/R message; explicit manual mode available |
 | Windows Gradle `test build` | Passed |
-| Python core | 72 tests passed on WSL Ubuntu 24.04 |
+| Python core | 76 tests; also run in a fresh environment without ROS/colcon |
 | ROS distribution actually tested | Jazzy |
 | ROS packages built | Nine |
-| Live movement | 7.6163 m observed over a 20-second capture |
+| Live movement | 7.1937 m observed over a 20-second capture; `LLL` forwarded through NT4/ROS |
 | Robot/camera/Jetson bench test | Not performed; hardware not connected |
 | Third-party CAD 3028 | Not downloaded; reference still needs identification/license |
 
 Fixes made during real launch validation: explicitly typed ROS string-array parameters, a tiny post-rotation velocity margin before the strict bridge gate, sensor-data QoS for camera subscriptions, aligned depth topic configuration, and automatic metre/millimetre depth decoding.
+
+The baseline had no FMS data path. The final change forwards Driver Station game data to NT4 and ROS, validates all eight L/R layouts, and suppresses scoring targets for malformed/empty data. Physical FMS operation remains untested. Clean CI also exposed bare sibling-test fixture imports; the core runner now supplies test helper paths explicitly instead of relying on a colcon overlay.
 
 Sürüm kararı: kullanıcı 2018 POWER UP oyununu koruyup mevcut WPILib 2025 uygulamasıyla devam etmeyi seçti. Geçmişte bulunmayan bir WPILib sürümü için `legacy-2018` etiketi oluşturulmaz. Değişiklik öncesi commit `0e756be` korunur.
 

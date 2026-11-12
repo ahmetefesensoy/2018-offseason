@@ -63,6 +63,7 @@ class FrcNtBridge(Node):
         }
         self._status_session = self._nt.getStringTopic(self._path("status/session_id")).subscribe("")
         self._status_mode = self._nt.getStringTopic(self._path("status/mode")).subscribe("UNKNOWN")
+        self._status_game_data = self._nt.getStringTopic(self._path("status/game_specific_message")).subscribe("")
         self._status_reject = self._nt.getStringTopic(self._path("status/reject_reason")).subscribe("NO_LINK")
         self._status_accepted = self._nt.getIntegerTopic(self._path("status/accepted_sequence")).subscribe(-1)
         self._status_robot_time = self._nt.getIntegerTopic(self._path("status/roborio_time_us")).subscribe(-1)
@@ -137,6 +138,7 @@ class FrcNtBridge(Node):
         message.header.stamp = self.get_clock().now().to_msg()
         message.session_id = self._status_session.get()
         message.mode = self._status_mode.get()
+        message.game_specific_message = self._status_game_data.get()
         message.reject_reason = self._status_reject.get()
         message.accepted_sequence = self._status_accepted.get()
         message.roborio_time_us = self._status_robot_time.get()

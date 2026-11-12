@@ -11,9 +11,11 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StringSubscriber;
+import edu.wpi.first.wpilibj.DriverStation;
 import frc.robot.AutonomyConstants;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /** NT4 implementation using a final commit sequence as the frame snapshot barrier. */
 public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
@@ -36,6 +38,8 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
 
     private final StringPublisher statusSessionIdPublisher;
     private final StringPublisher statusModePublisher;
+    private final StringPublisher statusGameDataPublisher;
+    private final Supplier<String> gameDataSupplier;
     private final StringPublisher statusRejectReasonPublisher;
     private final IntegerPublisher statusAcceptedSequencePublisher;
     private final IntegerPublisher statusRobotTimePublisher;
@@ -49,7 +53,12 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
     private long lastObservedCommitSequence = -1L;
 
     public AutonomyLinkIONetworkTables(NetworkTableInstance instance) {
+        this(instance, DriverStation::getGameSpecificMessage);
+    }
+
+    AutonomyLinkIONetworkTables(NetworkTableInstance instance, Supplier<String> gameDataSupplier) {
         Objects.requireNonNull(instance, "instance");
+        this.gameDataSupplier = Objects.requireNonNull(gameDataSupplier, "gameDataSupplier");
 
         sessionIdSubscriber = instance.getStringTopic(path("command/session_id"))
             .subscribe("", PERIODIC, KEEP_DUPLICATES);
@@ -78,6 +87,7 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
 
         statusSessionIdPublisher = instance.getStringTopic(path("status/session_id")).publish(PERIODIC);
         statusModePublisher = instance.getStringTopic(path("status/mode")).publish(PERIODIC);
+        statusGameDataPublisher = instance.getStringTopic(path("status/game_specific_message")).publish(PERIODIC);
         statusRejectReasonPublisher = instance.getStringTopic(path("status/reject_reason")).publish(PERIODIC);
         statusAcceptedSequencePublisher = instance.getIntegerTopic(path("status/accepted_sequence")).publish(PERIODIC);
         statusRobotTimePublisher = instance.getIntegerTopic(path("status/roborio_time_us")).publish(PERIODIC);
@@ -122,6 +132,7 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
         Objects.requireNonNull(status, "status");
         statusSessionIdPublisher.set(status.sessionId());
         statusModePublisher.set(status.mode());
+        statusGameDataPublisher.set(gameDataSupplier.get());
         statusRejectReasonPublisher.set(status.rejectReason().name());
         statusAcceptedSequencePublisher.set(status.acceptedSequence());
         statusRobotTimePublisher.set(status.robotTimeMicros());
@@ -162,6 +173,7 @@ public final class AutonomyLinkIONetworkTables implements AutonomyLinkIO {
 
         statusSessionIdPublisher.close();
         statusModePublisher.close();
+        statusGameDataPublisher.close();
         statusRejectReasonPublisher.close();
         statusAcceptedSequencePublisher.close();
         statusRobotTimePublisher.close();
